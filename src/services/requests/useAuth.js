@@ -15,8 +15,8 @@ export const useLoginAuth = () => {
       setUserData(data.user);
     },
     onSettled: () => {
-      Modal.destroyAll()
-    }
+      Modal.destroyAll();
+    },
   });
 };
 

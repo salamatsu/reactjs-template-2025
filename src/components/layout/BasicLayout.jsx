@@ -45,7 +45,10 @@ const BasicLayout = ({ navigations = [], store }) => {
         userData={null}
       />
       <Layout className="site-layout">
-        <Header className="site-layout-background flex justify-between items-center h-[55px] bg-primaryColor text-white px-3 md:pr-7">
+        <Header
+          style={{ backgroundColor: "#fe0808" }}
+          className="site-layout-background flex justify-between items-center h-[55px] bg-primaryColor text-white px-3 md:pr-7"
+        >
           <div className="flex h-full items-center gap-3">
             {collapsed ? (
               <MenuFoldOutlined

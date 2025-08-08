@@ -1,427 +1,400 @@
 import {
-  Alert,
-  Button,
-  Card,
-  Col,
-  Image,
-  InputNumber,
-  notification,
-  Row,
-  Select,
-  Space,
-  Tag,
-  Typography,
-} from "antd";
-import dayjs from "dayjs";
-import {
   AlertCircle,
   Bed,
   CheckCircle,
   Clock,
+  CreditCard,
   User,
   Users,
   XCircle,
 } from "lucide-react";
-import { memo, useCallback, useMemo, useState } from "react";
-// import {
-//   useGetRateByRoomTypeId,
-//   useGetRateTypes,
-//   useGetRoomTypes,
-// } from "../../../services/requests/useRequests";
+import React, { memo, useCallback, useMemo, useState } from "react";
+import {
+  useGetRoomsByBranch,
+  useGetRoomsRates,
+} from "../../../services/requests/useRooms";
+import { Button, Image, InputNumber, Modal, Select } from "antd";
 
-const { Title, Text, Paragraph } = Typography;
-const { Option } = Select;
-
-// Constants moved to separate file in real app
+// Constants
 const ROOM_STATUSES = {
   AVAILABLE: "available",
   OCCUPIED: "occupied",
   CLEANING: "cleaning",
   MAINTENANCE: "maintenance",
+  RESERVED: "reserved",
 };
 
 const STATUS_CONFIGS = {
   [ROOM_STATUSES.AVAILABLE]: {
-    color: "green",
+    color: "bg-green-100 text-green-800 border-green-200",
     icon: <CheckCircle className="w-4 h-4" />,
     label: "Available",
   },
   [ROOM_STATUSES.OCCUPIED]: {
-    color: "red",
+    color: "bg-red-100 text-red-800 border-red-200",
     icon: <XCircle className="w-4 h-4" />,
     label: "Occupied",
   },
   [ROOM_STATUSES.CLEANING]: {
-    color: "yellow",
+    color: "bg-yellow-100 text-yellow-800 border-yellow-200",
     icon: <AlertCircle className="w-4 h-4" />,
     label: "Cleaning",
   },
   [ROOM_STATUSES.MAINTENANCE]: {
-    color: "gray",
+    color: "bg-gray-100 text-gray-800 border-gray-200",
     icon: <AlertCircle className="w-4 h-4" />,
     label: "Maintenance",
   },
+  [ROOM_STATUSES.RESERVED]: {
+    color: "bg-blue-100 text-blue-800 border-blue-200",
+    icon: <Clock className="w-4 h-4" />,
+    label: "Reserved",
+  },
 };
 
-const DAY_TYPE_OPTIONS = [
-  { value: "weekday", label: "Weekday" },
-  { value: "weekend", label: "Weekend" },
-];
+// Utility functions
+const showNotification = (type, title, message) => {
+  const colors = {
+    success: "bg-green-100 border-green-400 text-green-700",
+    error: "bg-red-100 border-red-400 text-red-700",
+    warning: "bg-yellow-100 border-yellow-400 text-yellow-700",
+  };
+
+  // Create notification element
+  const notification = document.createElement("div");
+  notification.className = `fixed top-4 right-4 p-4 border rounded-lg shadow-lg z-50 ${
+    colors[type] || colors.error
+  }`;
+  notification.innerHTML = `
+    <div class="font-bold">${title}</div>
+    <div>${message}</div>
+  `;
+
+  document.body.appendChild(notification);
+
+  // Remove after 3 seconds
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.parentNode.removeChild(notification);
+    }
+  }, 3000);
+};
+
+const formatCurrency = (amount) => `₱${amount?.toLocaleString()}`;
+
+const getCurrentDayType = () => {
+  const day = new Date().getDay();
+  return day === 0 || day === 6 ? "weekend" : "weekday";
+};
+
 // Memoized Components
 const StatusTag = memo(({ status }) => {
   const config = STATUS_CONFIGS[status];
+  if (!config) return null;
+
   return (
-    <Tag color={config.color} className="flex items-center gap-1 p-4">
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${config.color}`}
+    >
+      {config.icon}
       {config.label}
-    </Tag>
+    </span>
   );
 });
 
-const RoomCard = memo(({ room, roomType, isSelected, onSelect }) => {
+const RoomCard = memo(({ room, isSelected, onSelect }) => {
   const isAvailable = room.roomStatus === ROOM_STATUSES.AVAILABLE;
 
   const handleClick = useCallback(() => {
-    // if (isAvailable) onSelect(room);
     onSelect(room);
-  }, [isAvailable, onSelect, room]);
+  }, [onSelect, room]);
 
   return (
-    <Card
-      hoverable={isAvailable}
-      className={`h-full transition-all cursor-pointer ${isSelected ? "ring-2 ring-blue-500" : ""
-        } ${!isAvailable ? "opacity-75 cursor-not-allowed" : ""}`}
+    <div
+      className={`bg-white rounded-lg shadow-sm border-2 transition-all cursor-pointer hover:shadow-md hover:scale-105 hover:border-red-400 duration-500 ${
+        isSelected
+          ? "border-primary-color ring-2 ring-red-200"
+          : "border-gray-200"
+      } ${!isAvailable ? "opacity-75" : ""}`}
       onClick={handleClick}
-      styles={{ body: { padding: "16px" } }}
     >
-      <div className="flex items-center justify-between mb-3">
-        <Text strong className="text-lg">
-          Room {room.roomNumber}
-        </Text>
-        <StatusTag status={room.roomStatus} />
-      </div>
-
-      <div className="space-y-2">
-        <Text strong className="block">
-          {roomType?.roomTypeName}
-        </Text>
-        <div className="flex items-center gap-2 text-gray-600">
-          <Bed className="w-4 h-4" />
-          <Text type="secondary">{roomType?.bedConfiguration}</Text>
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-semibold text-gray-900">
+            Room {room.roomNumber}
+          </h3>
+          <StatusTag status={room.roomStatus} />
         </div>
-        <div className="flex items-center gap-2 text-gray-600">
-          <Users className="w-4 h-4" />
-          <Text type="secondary">Max {roomType?.maxOccupancy} guests</Text>
-        </div>
-        <Text type="secondary">{roomType?.roomSize}</Text>
-      </div>
 
-      {room.notes && (
-        <Alert
-          message={room.notes}
-          type="warning"
-          size="small"
-          className="mt-3"
-        />
-      )}
-    </Card>
+        <div className="space-y-2">
+          <p className="font-medium text-gray-900">{room.roomTypeName}</p>
+          <div className="flex items-center gap-2 text-gray-600">
+            <Bed className="w-4 h-4" />
+            <span className="text-sm">{room.bedConfiguration}</span>
+          </div>
+          <div className="flex items-center gap-2 text-gray-600">
+            <Users className="w-4 h-4" />
+            <span className="text-sm">Max {room.maxOccupancy} guests</span>
+          </div>
+          <p className="text-sm text-gray-600">{room.roomSize}</p>
+        </div>
+
+        {room.notes && (
+          <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+            {room.notes}
+          </div>
+        )}
+      </div>
+    </div>
   );
 });
 
-const RateCard = memo(({ rate, rateTypeInfo }) => (
-  <Card className="bg-blue-50 border-blue-200">
-    <Row justify="space-between" align="middle">
-      <Col>
-        <Text strong>{rateTypeInfo.rateTypeName}</Text>
-      </Col>
-      <Col>
-        <Title level={3} className="text-blue-600 mb-0">
-          ₱{rate.rate?.toLocaleString() || rate.baseRate?.toLocaleString()}
-        </Title>
-      </Col>
-    </Row>
-  </Card>
+const RateCard = memo(({ rate, isSelected, onSelect }) => (
+  <div
+    className={`bg-blue-50 border rounded-lg p-4 cursor-pointer transition-all hover:bg-blue-100 ${
+      isSelected
+        ? "border-primary-color ring-2 ring-red-200"
+        : "border-gray-200"
+    }`}
+    onClick={() => onSelect(rate)}
+  >
+    <div className="flex justify-between items-center">
+      <div>
+        <p className="font-medium text-gray-900">{rate.rateTypeName}</p>
+      </div>
+      <div>
+        <p className="text-2xl font-bold text-primary-color">
+          {formatCurrency(rate.rate || rate.baseRate)}
+        </p>
+      </div>
+    </div>
+  </div>
 ));
 
-const RoomGrid = memo(
-  ({ groupedRooms, getRoomType, selectedRoom, onRoomSelect }) => (
-    <>
-      {Object.keys(groupedRooms).length === 0 ? (
-        <div className="text-center py-8">
-          <Text type="secondary">No rooms match your current filters</Text>
-        </div>
-      ) : (
-        Object.keys(groupedRooms)
-          .sort()
-          .map((floor) => (
-            <div key={floor} className="mb-6">
-              <Title level={4} className="mb-3">
-                Floor {floor}
-                <Text type="secondary" className="ml-2 text-base font-normal">
-                  ({groupedRooms[floor].length} rooms)
-                </Text>
-              </Title>
-              <Row gutter={[16, 16]}>
-                {groupedRooms[floor].map((room) => (
-                  <Col xs={24} sm={12} lg={8} key={room.roomId}>
-                    <RoomCard
-                      room={room}
-                      roomType={getRoomType(room.roomTypeId)}
-                      isSelected={selectedRoom?.roomId === room.roomId}
-                      onSelect={onRoomSelect}
-                    />
-                  </Col>
-                ))}
-              </Row>
+const RoomGrid = memo(({ groupedRooms, selectedRoom, onRoomSelect }) => (
+  <div className="space-y-6">
+    {Object.keys(groupedRooms).length === 0 ? (
+      <div className="text-center py-8">
+        <Bed className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+        <p className="text-gray-500 text-lg">
+          No rooms match your current filters
+        </p>
+        <p className="text-gray-400 text-sm mt-2">
+          Try adjusting your filter criteria
+        </p>
+      </div>
+    ) : (
+      Object.keys(groupedRooms)
+        .sort()
+        .map((floor) => (
+          <div key={floor}>
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+              Floor {floor}
+              <span className="ml-2 text-base font-normal text-gray-500">
+                ({groupedRooms[floor].length} room
+                {groupedRooms[floor].length !== 1 ? "s" : ""})
+              </span>
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {groupedRooms[floor].map((room) => (
+                <RoomCard
+                  key={room.roomId}
+                  room={room}
+                  isSelected={selectedRoom?.roomId === room.roomId}
+                  onSelect={onRoomSelect}
+                />
+              ))}
             </div>
-          ))
-      )}
-    </>
-  )
+          </div>
+        ))
+    )}
+  </div>
+));
+
+const BookingModal = memo(
+  ({
+    open = false,
+    selectedRoom,
+    selectedRate,
+    bookingDetails,
+    onClose,
+    onConfirm,
+  }) => {
+    if (!selectedRoom || !selectedRate) return null;
+
+    const total = selectedRate.rate || selectedRate.baseRate;
+    const checkInTime = new Date().toLocaleString();
+
+    return (
+      <Modal
+        open={open}
+        centered
+        closeIcon={false}
+        footer={
+          <div className="flex gap-3">
+            <Button block size="large" danger type="default" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              block
+              size="large"
+              type="primary"
+              onClick={onConfirm(selectedRoom, selectedRate, bookingDetails)}
+            >
+              Confirm Booking
+            </Button>
+          </div>
+        }
+      >
+        <h2 className="text-xl font-bold text-gray-900 mb-4">
+          Confirm Booking
+        </h2>
+
+        <div className="space-y-4 mb-6">
+          <div className="flex justify-between">
+            <p className="text-sm text-gray-600">Room</p>
+            <p className="font-medium">
+              {selectedRoom.roomNumber} - {selectedRoom.roomTypeName}
+            </p>
+          </div>
+
+          <div className="flex justify-between">
+            <p className="text-sm text-gray-600">Rate</p>
+            <p className="font-medium">{selectedRate.rateTypeName}</p>
+          </div>
+
+          <div className="flex justify-between">
+            <p className="text-sm text-gray-600">Guests</p>
+            <p className="font-medium">{bookingDetails.guests}</p>
+          </div>
+
+          <div className="flex justify-between">
+            <p className="text-sm text-gray-600">Check-in Time</p>
+            <p className="font-medium text-sm">{checkInTime}</p>
+          </div>
+
+          <div className="border-t pt-4">
+            <div className="flex justify-between items-center">
+              <p className="text-lg font-semibold">Total Amount</p>
+              <p className="text-2xl font-bold text-primary-color">
+                {formatCurrency(total)}
+              </p>
+            </div>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
 );
 
 const BookingForm = memo(
-  ({
-    selectedRoom,
-    roomType,
-    bookingDetails,
-    rates,
-    rateTypes,
-    availableDurations,
-    onBookingChange,
-    onBook,
-  }) => {
-    const filteredRates = useMemo(() => {
-      if (!rates?.length || !rateTypes?.length) return [];
+  ({ selectedRoom, bookingDetails, onBookingChange, onBook }) => {
+    const [selectedRate, setSelectedRate] = useState(null);
+    const getRoomsRates = useGetRoomsRates(
+      selectedRoom.roomTypeId,
+      selectedRoom.branchId
+    );
 
-      return rates.filter((rate) => {
-        const rateTypeInfo = rateTypes.find(
-          (type) => type.rateTypeId === rate.rateTypeId
+    const handleBookClick = useCallback(() => {
+      if (!selectedRate) {
+        showNotification(
+          "error",
+          "Rate Required",
+          "Please select a rate before booking."
         );
-        return (
-          rateTypeInfo?.dayType === bookingDetails.dayType &&
-          rateTypeInfo?.duration === bookingDetails.duration
-        );
-      });
-    }, [rates, rateTypes, bookingDetails.dayType, bookingDetails.duration]);
+        return;
+      }
+      onBook(selectedRate);
+    }, [selectedRate, onBook]);
 
     return (
-      <Card>
-        <Title level={4} className="mb-4">
+      <div className="bg-white rounded-lg shadow-sm border p-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">
           Book Room {selectedRoom.roomNumber}
-        </Title>
+        </h2>
 
-        <div className="mb-4">
+        <div className="mb-6">
           <Image
-            src={roomType?.imageUrl}
-            alt={roomType?.roomTypeName}
+            src={selectedRoom?.imageUrl}
+            alt={selectedRoom?.roomTypeName}
             className="w-full h-32 object-cover rounded-lg mb-3"
-            preview={false}
+            onError={(e) => {
+              e.target.src =
+                "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzlmYTZiNyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9IjAuM2VtIj5Sb29tIEltYWdlPC90ZXh0Pjwvc3ZnPg==";
+            }}
           />
-          <Title level={5}>{roomType?.roomTypeName}</Title>
-          <Paragraph type="secondary" className="text-sm">
-            {roomType?.description}
-          </Paragraph>
+          <h3 className="text-lg font-medium text-gray-900">
+            {selectedRoom?.roomTypeName}
+          </h3>
+          <p className="text-sm text-gray-600 mt-1">
+            {selectedRoom?.description}
+          </p>
         </div>
 
-        <Space direction="vertical" size="large" className="w-full">
-          <Row gutter={12}>
-            <Col span={12}>
-              <div className="mb-2">
-                <Text strong>
-                  <Clock className="w-4 h-4 inline mr-1" />
-                  Duration
-                </Text>
-              </div>
-              <Select
-                value={bookingDetails.duration}
-                onChange={(value) => onBookingChange("duration", value)}
-                className="w-full"
-                size="large"
-                options={availableDurations.map((duration) => ({
-                  value: duration,
-                  label: `${duration} Hours`,
-                }))}
-              />
-            </Col>
-            <Col span={12}>
-              <div className="mb-2">
-                <Text strong>Day Type</Text>
-              </div>
-              <Select
-                value={bookingDetails.dayType}
-                onChange={(value) => onBookingChange("dayType", value)}
-                className="w-full"
-                size="large"
-                options={DAY_TYPE_OPTIONS.map((option) => ({
-                  value: option.value,
-                  label: option.label,
-                }))}
-              />
-            </Col>
-          </Row>
-
+        <div className="space-y-6">
           <div>
-            <div className="mb-2">
-              <Text strong>
-                <User className="w-4 h-4 inline mr-1" />
-                Number of Guests
-              </Text>
-            </div>
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+              <User className="w-4 h-4" />
+              Number of Guests
+            </label>
+
             <InputNumber
+              style={{ width: "100%" }}
               min={1}
-              max={roomType?.maxOccupancy || 2}
+              max={selectedRoom?.maxOccupancy || 2}
               value={bookingDetails.guests}
               onChange={(value) => onBookingChange("guests", value)}
               size="large"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Maximum {selectedRoom?.maxOccupancy} guests allowed
+            </p>
           </div>
 
-          {/* Available Rates */}
-          {filteredRates.map((rate) => {
-            const rateTypeInfo = rateTypes.find(
-              (type) => type.rateTypeId === rate.rateTypeId
-            );
-            return (
-              <RateCard
-                key={rate.rateTypeId}
-                rate={rate}
-                rateTypeInfo={rateTypeInfo}
-              />
-            );
-          })}
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+              <CreditCard className="w-4 h-4" />
+              Select Rate
+            </label>
+            <div className="space-y-3">
+              {getRoomsRates.data.length === 0 ? (
+                <div className="text-center py-4 text-gray-500">
+                  <CreditCard className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                  <p>No rates available for this room type</p>
+                </div>
+              ) : (
+                getRoomsRates.data.map((rate) => (
+                  <RateCard
+                    key={rate.rateTypeId}
+                    rate={rate}
+                    isSelected={selectedRate?.rateTypeId === rate.rateTypeId}
+                    onSelect={setSelectedRate}
+                  />
+                ))
+              )}
+            </div>
+          </div>
 
           <Button
-            type="primary"
+            block
             size="large"
-            onClick={onBook}
-            className="w-full"
-            disabled={filteredRates.length === 0}
+            type="primary"
+            disabled={getRoomsRates.data.length === 0 || !selectedRate}
+            onClick={handleBookClick}
           >
-            Book Room
+            {selectedRate
+              ? `Book for ${formatCurrency(
+                  selectedRate.rate || selectedRate.baseRate
+                )}`
+              : "Select a Rate to Continue"}
           </Button>
-        </Space>
-      </Card>
+        </div>
+      </div>
     );
   }
 );
 
 // Custom hooks
-const useRooms = () => {
-  return useMemo(() => {
-    const baseRooms = [
-      {
-        roomId: 1,
-        roomNumber: "101",
-        floor: "1",
-        roomTypeId: 1,
-        roomStatus: ROOM_STATUSES.AVAILABLE,
-      },
-      {
-        roomId: 2,
-        roomNumber: "102",
-        floor: "1",
-        roomTypeId: 2,
-        roomStatus: ROOM_STATUSES.OCCUPIED,
-      },
-      {
-        roomId: 3,
-        roomNumber: "103",
-        floor: "1",
-        roomTypeId: 1,
-        roomStatus: ROOM_STATUSES.CLEANING,
-      },
-      {
-        roomId: 4,
-        roomNumber: "104",
-        floor: "1",
-        roomTypeId: 3,
-        roomStatus: ROOM_STATUSES.AVAILABLE,
-      },
-      {
-        roomId: 5,
-        roomNumber: "105",
-        floor: "1",
-        roomTypeId: 2,
-        roomStatus: ROOM_STATUSES.MAINTENANCE,
-      },
-      {
-        roomId: 6,
-        roomNumber: "201",
-        floor: "2",
-        roomTypeId: 3,
-        roomStatus: ROOM_STATUSES.AVAILABLE,
-      },
-      {
-        roomId: 7,
-        roomNumber: "202",
-        floor: "2",
-        roomTypeId: 4,
-        roomStatus: ROOM_STATUSES.OCCUPIED,
-      },
-      {
-        roomId: 8,
-        roomNumber: "203",
-        floor: "2",
-        roomTypeId: 3,
-        roomStatus: ROOM_STATUSES.AVAILABLE,
-      },
-      {
-        roomId: 9,
-        roomNumber: "204",
-        floor: "2",
-        roomTypeId: 4,
-        roomStatus: ROOM_STATUSES.CLEANING,
-      },
-      {
-        roomId: 10,
-        roomNumber: "205",
-        floor: "2",
-        roomTypeId: 2,
-        roomStatus: ROOM_STATUSES.AVAILABLE,
-      },
-      {
-        roomId: 11,
-        roomNumber: "301",
-        floor: "3",
-        roomTypeId: 4,
-        roomStatus: ROOM_STATUSES.AVAILABLE,
-      },
-      {
-        roomId: 12,
-        roomNumber: "302",
-        floor: "3",
-        roomTypeId: 3,
-        roomStatus: ROOM_STATUSES.OCCUPIED,
-      },
-      {
-        roomId: 13,
-        roomNumber: "303",
-        floor: "3",
-        roomTypeId: 4,
-        roomStatus: ROOM_STATUSES.AVAILABLE,
-      },
-      {
-        roomId: 14,
-        roomNumber: "304",
-        floor: "3",
-        roomTypeId: 3,
-        roomStatus: ROOM_STATUSES.AVAILABLE,
-      },
-    ];
-
-    return baseRooms.map((room) => ({
-      ...room,
-      lastCleaned: new Date(
-        Date.now() - Math.random() * 86400000 * 2
-      ).toISOString(),
-      maintenanceStatus:
-        room.roomStatus === ROOM_STATUSES.MAINTENANCE ? "scheduled" : "none",
-      notes: room?.notes,
-      isActive: true,
-    }));
-  }, []);
-};
-
 const useFilters = () => {
   const [filters, setFilters] = useState({
     floor: "all",
@@ -439,8 +412,7 @@ const useFilters = () => {
 const useBooking = () => {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [bookingDetails, setBookingDetails] = useState({
-    duration: "12",
-    dayType: dayjs().day() === 0 || dayjs().day() === 6 ? "weekend" : "weekday", // is weekday using dayjs
+    dayType: getCurrentDayType(),
     guests: 2,
   });
 
@@ -451,9 +423,8 @@ const useBooking = () => {
   const resetBooking = useCallback(() => {
     setSelectedRoom(null);
     setBookingDetails({
-      duration: "12",
-      dayType: "weekday",
-      guests: 1,
+      dayType: getCurrentDayType(),
+      guests: 2,
     });
   }, []);
 
@@ -466,11 +437,86 @@ const useBooking = () => {
   };
 };
 
+// Statistics component
+const RoomStats = memo(({ rooms }) => {
+  const stats = useMemo(() => {
+    const available = rooms.filter(
+      (r) => r.roomStatus === ROOM_STATUSES.AVAILABLE
+    ).length;
+    const occupied = rooms.filter(
+      (r) => r.roomStatus === ROOM_STATUSES.OCCUPIED
+    ).length;
+    const maintenance = rooms.filter(
+      (r) => r.roomStatus === ROOM_STATUSES.MAINTENANCE
+    ).length;
+    const cleaning = rooms.filter(
+      (r) => r.roomStatus === ROOM_STATUSES.CLEANING
+    ).length;
+    const reserved = rooms.filter(
+      (r) => r.roomStatus === ROOM_STATUSES.RESERVED
+    ).length;
+
+    return {
+      available,
+      occupied,
+      maintenance,
+      cleaning,
+      reserved,
+      total: rooms.length,
+    };
+  }, [rooms]);
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        Room Statistics
+      </h2>
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
+          <div className="text-sm text-gray-600">Total Rooms</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-green-600">
+            {stats.available}
+          </div>
+          <div className="text-sm text-gray-600">Available</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-red-600">
+            {stats.occupied}
+          </div>
+          <div className="text-sm text-gray-600">Occupied</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-blue-600">
+            {stats.reserved}
+          </div>
+          <div className="text-sm text-gray-600">Reserved</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-yellow-600">
+            {stats.cleaning}
+          </div>
+          <div className="text-sm text-gray-600">Cleaning</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-gray-600">
+            {stats.maintenance}
+          </div>
+          <div className="text-sm text-gray-600">Maintenance</div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 // Main Component
 const RoomBooking = () => {
-  // Hooks
-  const rooms = useRooms();
   const [filters, updateFilter] = useFilters();
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [selectedRate, setSelectedRate] = useState(null);
+
   const {
     selectedRoom,
     setSelectedRoom,
@@ -479,33 +525,20 @@ const RoomBooking = () => {
     resetBooking,
   } = useBooking();
 
-  // API calls
-  const { data: roomTypes = [], isPending: loadingRoomTypes } = {
-    data: [],
-    isPending: false,
-  };
-  const { data: rateTypes = [], isPending: loadingRateTypes } = {
-    data: [],
-    isPending: false,
-  };
-  const { data: rates = [], isPending: loadingRates } = {
-    data: [],
-    isPending: false,
-  };
+  const getRoomsByBranch = useGetRoomsByBranch(1);
 
-  // Memoized computations
-  const roomTypeMap = useMemo(
-    () =>
-      roomTypes.reduce((acc, roomType) => {
-        acc[roomType.roomTypeId] = roomType;
-        return acc;
-      }, {}),
-    [roomTypes]
-  );
+  const roomTypes = useMemo(() => {
+    return getRoomsByBranch.data.reduce((acc, { roomTypeName, roomTypeId }) => {
+      if (!acc.find((item) => item.roomTypeId === roomTypeId)) {
+        acc.push({ roomTypeName, roomTypeId });
+      }
+      return acc;
+    }, []);
+  }, [getRoomsByBranch.data]);
 
   const filteredRooms = useMemo(
     () =>
-      rooms
+      getRoomsByBranch.data
         .filter(
           (room) => filters.floor === "all" || room.floor === filters.floor
         )
@@ -518,8 +551,14 @@ const RoomBooking = () => {
           (room) =>
             filters.status === "all" || room.roomStatus === filters.status
         )
-        .sort((a, b) => a.roomNumber.localeCompare(b.roomNumber)),
-    [rooms, filters]
+        .sort((a, b) => {
+          // Sort by floor first, then by room number
+          if (a.floor !== b.floor) {
+            return a.floor.localeCompare(b.floor);
+          }
+          return a.roomNumber.localeCompare(b.roomNumber);
+        }),
+    [getRoomsByBranch.data, filters]
   );
 
   const groupedRooms = useMemo(
@@ -533,141 +572,103 @@ const RoomBooking = () => {
   );
 
   const availableFloors = useMemo(
-    () => [...new Set(rooms.map((room) => room.floor))].sort(),
-    [rooms]
+    () => [...new Set(getRoomsByBranch.data.map((room) => room.floor))].sort(),
+    [getRoomsByBranch.data]
   );
 
-  const availableDurations = useMemo(() => {
-    if (!rates?.length || !rateTypes?.length) return [];
-    const rateDurations = rates
-      .map(
-        (rate) =>
-          rateTypes.find((type) => type.rateTypeId === rate.rateTypeId)
-            ?.duration
-      )
-      .filter(Boolean);
-    return [...new Set(rateDurations)].sort();
-  }, [rates, rateTypes]);
-
-  // Event handlers
-  const getRoomType = useCallback(
-    (roomTypeId) => roomTypeMap[roomTypeId],
-    [roomTypeMap]
-  );
-
-  const handleRoomSelect = useCallback(
-    (room) => {
-      if (room.roomStatus === ROOM_STATUSES.AVAILABLE) {
-        setSelectedRoom(room);
-      }
-
-      console.log(room.roomStatus);
-
-      if (room.roomStatus === ROOM_STATUSES.MAINTENANCE) {
-        notification.error({
-          message: "Maintenance Error",
-          description: "Room is currently under maintenance.",
-        });
-      }
-
-      if (room.roomStatus === ROOM_STATUSES.CLEANING) {
-        notification.error({
-          message: "Cleaning Error",
-          description: "Room is currently under cleaning.",
-        });
-      }
-
-      if (room.roomStatus === ROOM_STATUSES.OCCUPIED) {
-        notification.error({
-          message: "Occupied Error",
-          description: "Room is currently occupied.",
-        });
-      }
-
-      if (room.roomStatus === ROOM_STATUSES.RESERVED) {
-        notification.error({
-          message: "Reserved Error",
-          description: "Room is currently reserved.",
-        });
-      }
-    },
-    [setSelectedRoom]
-  );
-
-  const handleBookRoom = useCallback(() => {
-    const applicableRates = rates.filter((rate) => {
-      const rateTypeInfo = rateTypes.find(
-        (type) => type.rateTypeId === rate.rateTypeId
-      );
-      return (
-        rateTypeInfo?.dayType === bookingDetails.dayType &&
-        rateTypeInfo?.duration === bookingDetails.duration
-      );
-    });
-
-    if (applicableRates.length === 0) {
-      notification.error({
-        message: "Rate Error",
-        description: "Unable to calculate rate for selected options.",
-      });
+  const handleRoomSelect = useCallback((room) => {
+    if (room.roomStatus === ROOM_STATUSES.AVAILABLE) {
+      setSelectedRoom(room);
       return;
     }
 
-    const totalRate = applicableRates[0].baseRate || applicableRates[0].rate;
+    const statusMessages = {
+      [ROOM_STATUSES.MAINTENANCE]:
+        "Room is currently under maintenance and cannot be booked.",
+      [ROOM_STATUSES.CLEANING]:
+        "Room is currently being cleaned. Please wait until cleaning is complete.",
+      [ROOM_STATUSES.OCCUPIED]: "Room is currently occupied by another guest.",
+      [ROOM_STATUSES.RESERVED]:
+        "Room is currently reserved. Please select another room.",
+    };
 
-    //   {
-    //   "bookingId": 1,
-    //   "bookingReference": "SOGO2025073100001",
-    //   "branchId": 1,
-    //   "roomId": 2,
-    //   "roomTypeId": 2,
-    //   "rateId": 6,
-    //   "rateTypeId": 2,
-    //   "numberOfGuests": 2,
-    //   "checkInDateTime": "2025-07-31T14:00:00Z",
-    //   "expectedCheckOutDateTime": "2025-08-01T14:00:00Z",
-    //   "actualCheckInDateTime": "2025-07-31T14:15:00Z",
-    //   "actualCheckOutDateTime": null,
-    //   "stayDuration": 24,
-    //   "stayDurationType": "hours",
-    //   "bookingStatus": "checked_in",
-    //   "paymentStatus": "paid",
-    //   "baseAmount": 1500.0,
-    //   "discountAmount": 0.0,
-    //   "taxAmount": 180.0,
-    //   "totalAmount": 1680.0,
-    //   "currency": "PHP",
-    //   "paymentMethod": "cash",
-    //   "specialRequests": "",
-    //   "guestNotes": "",
-    //   "staffNotes": "Regular customer, no issues",
-    //   "source": "walk_in",
-    //   "cancellationPolicy": "no_cancellation_8hrs_before",
-    //   "createdAt": "2025-07-31T13:45:00Z",
-    //   "updatedAt": "2025-07-31T14:15:00Z",
-    //   "createdBy": "front_desk_01"
-    // }
+    const message =
+      statusMessages[room.roomStatus] || "Room is not available for booking.";
+    showNotification("error", "Room Unavailable", message);
+  }, []);
 
-    notification.success({
-      message: "Booking Confirmed",
-      description: `Room ${selectedRoom.roomNumber
-        } has been booked successfully for ₱${totalRate.toLocaleString()}`,
-      duration: 4,
-    });
+  const handleBookRoom = useCallback((rate) => {
+    setSelectedRate(rate);
+    setShowBookingModal(true);
+  }, []);
 
-    resetBooking();
-  }, [selectedRoom, rates, rateTypes, bookingDetails, resetBooking]);
+  const handleConfirmBooking = useCallback(
+    (room, rate, details) => {
+      // Simulate API call delay
+      setTimeout(() => {
+        showNotification(
+          "success",
+          "Booking Confirmed",
+          `Room ${room.roomNumber} has been successfully booked for ${details.guests} guest(s)!`
+        );
+
+        // Update room status to occupied (simulate real booking)
+        const roomIndex = mockRoomsData.findIndex(
+          (r) => r.roomId === room.roomId
+        );
+        if (roomIndex !== -1) {
+          mockRoomsData[roomIndex].roomStatus = ROOM_STATUSES.OCCUPIED;
+          mockRoomsData[
+            roomIndex
+          ].notes = `Booked at ${new Date().toLocaleTimeString()}`;
+        }
+
+        setShowBookingModal(false);
+        resetBooking();
+        setSelectedRate(null);
+      }, 1000);
+    },
+    [resetBooking]
+  );
+
+  const handleClearFilters = useCallback(() => {
+    updateFilter("floor", "all");
+    updateFilter("roomType", "all");
+    updateFilter("status", "all");
+  }, [updateFilter]);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-3 flex flex-col">
-      <div className="max-w-7xl w-full mx-auto flex flex-1 flex-col gap-3">
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Room Booking System
+          </h1>
+          <p className="text-gray-600">
+            Select and book available rooms for your guests
+          </p>
+        </div>
+
+        {/* Room Statistics */}
+        <RoomStats rooms={getRoomsByBranch.data} />
+
         {/* Filters */}
-        <Card>
-          <Row gutter={16}>
-            <Col xs={24} md={8}>
-              <div className="mb-2">
-                <Text strong>Floor</Text>
-              </div>
+        <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Filter Rooms
+            </h2>
+            <Button type="link" ghost danger onClick={handleClearFilters}>
+              Clear All Filters
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Floor
+              </label>
+
               <Select
                 value={filters.floor}
                 onChange={(value) => updateFilter("floor", value)}
@@ -680,29 +681,32 @@ const RoomBooking = () => {
                   })),
                 ]}
               />
-            </Col>
-            <Col xs={24} md={8} className=" flex flex-row">
-              <div className="">
-                <Text strong>Room Type</Text>
-              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Room Type
+              </label>
+
               <Select
                 value={filters.roomType}
                 onChange={(value) => updateFilter("roomType", value)}
                 className="w-full"
-                loading={loadingRoomTypes}
+                loading={getRoomsByBranch.isPending}
                 options={[
                   { value: "all", label: "All Room Types" },
-                  ...roomTypes.map((rt) => ({
-                    value: rt.roomTypeId,
-                    label: rt.roomTypeName,
+                  ...roomTypes.map(({ roomTypeName, roomTypeId }) => ({
+                    value: roomTypeId,
+                    label: roomTypeName,
                   })),
                 ]}
               />
-            </Col>
-            <Col xs={24} md={8}>
-              <div className="mb-2">
-                <Text strong>Status</Text>
-              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
               <Select
                 value={filters.status}
                 onChange={(value) => updateFilter("status", value)}
@@ -715,62 +719,80 @@ const RoomBooking = () => {
                   })),
                 ]}
               />
-            </Col>
-          </Row>
-        </Card>
-
-        <div className=" grid grid-cols-12 gap-3 flex-1 h-full ">
-          <div className=" col-span-8 flex flex-col overflow-auto">
-            <Card>
-              <RoomGrid
-                groupedRooms={groupedRooms}
-                getRoomType={getRoomType}
-                selectedRoom={selectedRoom}
-                onRoomSelect={handleRoomSelect}
-              />
-            </Card>
-          </div>
-
-          {/* Booking Panel */}
-          <div className=" col-span-4 ">
-            <div className="space-y-6 flex flex-col gap-3">
-              {/* Legend */}
-              <Card>
-                <Title level={4} className="mb-3">
-                  Room Status Legend
-                </Title>
-                <Space size="small">
-                  {Object.entries(STATUS_CONFIGS).map(([status, config]) => (
-                    <Tag key={status} color={config.color}>
-                      {config.label}
-                    </Tag>
-                  ))}
-                </Space>
-              </Card>
-
-              {/* Booking Form */}
-              {selectedRoom ? (
-                <BookingForm
-                  selectedRoom={selectedRoom}
-                  roomType={getRoomType(selectedRoom.roomTypeId)}
-                  bookingDetails={bookingDetails}
-                  rates={rates}
-                  rateTypes={rateTypes}
-                  availableDurations={availableDurations}
-                  onBookingChange={updateBookingDetails}
-                  onBook={handleBookRoom}
-                />
-              ) : (
-                <Card className="text-center py-8">
-                  <Bed className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <Text type="secondary">
-                    Select an available room to start booking
-                  </Text>
-                </Card>
-              )}
             </div>
           </div>
         </div>
+
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Room Grid */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900">
+                  Available Rooms ({filteredRooms.length})
+                </h2>
+                <div className="flex items-center gap-4">
+                  {Object.entries(STATUS_CONFIGS).map(([status, config]) => (
+                    <div key={status} className="flex items-center gap-1">
+                      {config.icon}
+                      <span className="text-xs text-gray-600">
+                        {config.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <RoomGrid
+                groupedRooms={groupedRooms}
+                selectedRoom={selectedRoom}
+                onRoomSelect={handleRoomSelect}
+              />
+            </div>
+          </div>
+
+          {/* Booking Panel */}
+          <div className="lg:col-span-1">
+            {selectedRoom ? (
+              <BookingForm
+                selectedRoom={selectedRoom}
+                bookingDetails={bookingDetails}
+                onBookingChange={updateBookingDetails}
+                onBook={handleBookRoom}
+              />
+            ) : (
+              <div className="bg-white rounded-lg shadow-sm border p-6 text-center">
+                <Bed className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Select a Room
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Choose an available room from the list to start booking
+                </p>
+                <div className="space-y-2 text-sm text-gray-500">
+                  <p>• Click on any available room to view details</p>
+                  <p>• Use filters to narrow down your search</p>
+                  <p>• View room statistics above</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Booking Confirmation Modal */}
+        <BookingModal
+          open={showBookingModal}
+          selectedRoom={selectedRoom}
+          selectedRate={selectedRate}
+          bookingDetails={bookingDetails}
+          onClose={() => {
+            setShowBookingModal(false);
+            setSelectedRate(null);
+          }}
+          onConfirm={handleConfirmBooking}
+        />
+        {/* {showBookingModal && (
+        )} */}
       </div>
     </div>
   );

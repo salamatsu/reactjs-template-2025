@@ -14,6 +14,7 @@ export const useGetBookings = (filters = {}) => {
   return useQuery({
     queryKey: ["bookings"],
     queryFn: () => getBookingsApi(filters),
+    placeholderData: [],
     staleTime: 5 * 60 * 1000, // 5 minutes
     cacheTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: false,
@@ -29,6 +30,7 @@ export const useGetBookingByReference = (reference, options = {}) => {
   return useQuery({
     queryKey: ["booking"],
     queryFn: () => getBookingByReferenceApi(reference),
+    placeholderData: [],
     enabled: !!reference,
     staleTime: 2 * 60 * 1000,
     ...options,
