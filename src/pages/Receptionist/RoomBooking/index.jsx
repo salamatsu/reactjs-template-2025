@@ -11,9 +11,11 @@ import {
   Modal,
   notification,
   Select,
+  Spin,
   Tag,
   Typography,
 } from "antd";
+import dayjs from "dayjs";
 import {
   AlertCircle,
   Bed,
@@ -29,6 +31,7 @@ import {
   XCircle,
 } from "lucide-react";
 import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useGetAllAdditionalServices } from "../../../services/requests/useAdditionalServices";
 import { useGetPromotionByPromoCode } from "../../../services/requests/usePromotions";
 import {
   useGetRoomsByBranch,
@@ -85,77 +88,6 @@ const PAYMENT_METHODS = [
   { value: "bank_transfer", label: "Bank Transfer" },
 ];
 
-// Mock data for development
-const mockPromotions = [
-  {
-    promoId: 1,
-    promoCode: "WELCOME50",
-    promoName: "Welcome Discount",
-    promoType: "percentage",
-    discountValue: 10,
-    minimumStayHours: 3,
-    applicableRoomTypes: [1, 2],
-    applicableBranches: [1, 2],
-    usageLimit: 5,
-    currentUsage: 3,
-    dayTypeRestrictions: ["weekday", "weekend"],
-    validFrom: "2024-01-01",
-    validTo: "2024-12-31",
-    isActive: true,
-  },
-  {
-    promoId: 2,
-    promoCode: "SUMMER20",
-    promoName: "Summer Offer",
-    promoType: "fixed",
-    discountValue: 20,
-    minimumStayHours: 3,
-    applicableRoomTypes: [1, 2],
-    applicableBranches: [1, 2],
-    usageLimit: 5,
-    currentUsage: 3,
-    dayTypeRestrictions: ["weekday", "weekend"],
-    validFrom: "2024-01-01",
-    validTo: "2024-12-31",
-    isActive: true,
-  },
-];
-
-const mockAdditionalServices = [
-  {
-    serviceId: 1,
-    serviceName: "Extra Towel",
-    serviceType: "amenity",
-    basePrice: 50,
-    isPerItem: true,
-    isActive: true,
-  },
-  {
-    serviceId: 2,
-    serviceName: "Room Service",
-    serviceType: "service",
-    basePrice: 150,
-    isPerItem: false,
-    isActive: true,
-  },
-  {
-    serviceId: 3,
-    serviceName: "Late Checkout",
-    serviceType: "extension",
-    basePrice: 200,
-    isPerItem: false,
-    isActive: true,
-  },
-  {
-    serviceId: 4,
-    serviceName: "Minibar Restock",
-    serviceType: "amenity",
-    basePrice: 300,
-    isPerItem: false,
-    isActive: true,
-  },
-];
-
 // Utility functions
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat("en-PH", {
@@ -192,7 +124,6 @@ const PromoCodeInput = memo(
     // const [isValidating, setIsValidating] = useState(false);
     const getPromotionByPromoCode = useGetPromotionByPromoCode();
 
-    console.log("getPromotionByPromoCode", getPromotionByPromoCode.data);
     const handleApplyPromo = async () => {
       if (!promoCode.trim()) {
         notification.error({
@@ -277,6 +208,7 @@ const PromoCodeInput = memo(
             onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
             onPressEnter={handleApplyPromo}
             prefix={<Gift className="w-4 h-4 text-gray-400" />}
+            allowClear
           />
           <Button
             type="primary"
@@ -301,7 +233,7 @@ const PromoCodeInput = memo(
 
 const AdditionalServicesSelector = memo(
   ({ selectedServices, onServicesChange }) => {
-    const [availableServices] = useState(mockAdditionalServices);
+    const getAllAdditionalServices = useGetAllAdditionalServices();
 
     const handleServiceToggle = (service, checked) => {
       if (checked) {
@@ -340,63 +272,71 @@ const AdditionalServicesSelector = memo(
       return selectedServices.find((s) => s.serviceId === serviceId);
     };
 
+    // Loading
+    if (getAllAdditionalServices.isPending)
+      return (
+        <div className="flex items-center justify-center">
+          <Spin size="small" />
+        </div>
+      );
     return (
       <div className="space-y-3">
         <div className="flex items-center gap-2 mb-3">
           <Plus className="w-4 h-4 text-gray-600" />
           <Text strong>Additional Services</Text>
         </div>
+        <div className=" space-y-3 max-h-[300px] overflow-auto">
+          {getAllAdditionalServices.data.map((service) => {
+            const isSelected = isServiceSelected(service.serviceId);
+            const selectedService = getSelectedService(service.serviceId);
 
-        {availableServices.map((service) => {
-          const isSelected = isServiceSelected(service.serviceId);
-          const selectedService = getSelectedService(service.serviceId);
-
-          return (
-            <div key={service.serviceId} className="border rounded-lg p-3">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    checked={isSelected}
-                    onChange={(e) =>
-                      handleServiceToggle(service, e.target.checked)
-                    }
-                  />
-                  <div>
-                    <Text strong>{service.serviceName}</Text>
-                    <div className="text-xs text-gray-500 capitalize">
-                      {service.serviceType}
+            return (
+              <div key={service.serviceId} className="border rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={isSelected}
+                      onChange={(e) =>
+                        handleServiceToggle(service, e.target.checked)
+                      }
+                    />
+                    <div>
+                      <Text strong>{service.serviceName}</Text>
+                      <div className="text-xs text-gray-500 capitalize">
+                        {service.serviceType}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <Text strong className="text-blue-600">
-                  {formatCurrency(service.basePrice)}
-                  {service.isPerItem ? "/item" : ""}
-                </Text>
-              </div>
-
-              {isSelected && service.isPerItem && (
-                <div className="flex items-center gap-2 mt-2">
-                  <Text className="text-sm">Quantity:</Text>
-                  <InputNumber
-                    min={1}
-                    max={10}
-                    value={selectedService?.quantity || 1}
-                    onChange={(value) =>
-                      handleQuantityChange(service.serviceId, value)
-                    }
-                    size="small"
-                  />
-                  <Text className="text-sm text-gray-500">
-                    Total:{" "}
-                    {formatCurrency(
-                      selectedService?.totalAmount || service.basePrice
-                    )}
+                  <Text strong className="text-blue-600">
+                    {formatCurrency(service.basePrice)}
+                    {service.isPerItem == 1 ? "/item" : ""}
                   </Text>
                 </div>
-              )}
-            </div>
-          );
-        })}
+
+                {isSelected && service.isPerItem == 1 && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <Text className="text-sm">Quantity:</Text>
+                    <InputNumber
+                      min={1}
+                      max={10}
+                      value={selectedService?.quantity || 1}
+                      onChange={(value) =>
+                        handleQuantityChange(service.serviceId, value)
+                      }
+                      size="small"
+                    />
+                    <Text className="text-sm text-gray-500">
+                      Total:{" "}
+                      {formatCurrency(
+                        selectedService?.totalAmount || service.basePrice
+                      )}
+                    </Text>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   }
@@ -461,7 +401,7 @@ const PaymentSummary = memo(
                   >
                     <Text>
                       {service.serviceName}
-                      {service.isPerItem && ` × ${service.quantity}`}
+                      {service.isPerItem == 1 && ` × ${service.quantity}`}
                     </Text>
                     <Text>{formatCurrency(service.totalAmount)}</Text>
                   </div>
@@ -659,6 +599,7 @@ const EnhancedBookingForm = memo(
     const [selectedRate, setSelectedRate] = useState(null);
     const [appliedPromo, setAppliedPromo] = useState(null);
     const [selectedServices, setSelectedServices] = useState([]);
+
     const getRoomsRates = useGetRoomsRates(
       selectedRoom.roomTypeId,
       selectedRoom.branchId
@@ -703,6 +644,9 @@ const EnhancedBookingForm = memo(
       return subtotal - discountAmount + taxAmount;
     }, [selectedRate, selectedServices, appliedPromo]);
 
+    const currentDayType =
+      dayjs().day() === 0 || dayjs().day() === 6 ? "weekend" : "weekday";
+
     return (
       <div className="bg-white rounded-lg shadow-sm border">
         <div className="p-6">
@@ -745,40 +689,54 @@ const EnhancedBookingForm = memo(
             </div>
 
             {/* Rate Selection */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+            <div className=" space-y-3">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 ">
                 <CreditCard className="w-4 h-4" />
                 Select Rate
               </label>
-              <div className="space-y-3">
-                {getRoomsRates.data.map((rate) => (
-                  <div
-                    key={rate.rateId}
-                    className={`border rounded-lg p-4 cursor-pointer transition-all hover:bg-red-50 ${
-                      selectedRate?.rateId === rate.rateId
-                        ? "border-red-500 ring-2 ring-red-200 bg-red-50"
-                        : "border-gray-200"
-                    }`}
-                    onClick={() => setSelectedRate(rate)}
-                  >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {rate.rateTypeName}
-                        </p>
-                        <p className="text-sm text-gray-500">{rate.duration}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xl font-bold text-red-600">
-                          {formatCurrency(rate.baseRate * rate.duration)}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {formatCurrency(rate.baseRate)} / hour
-                        </p>
+              {/* <Input.Search
+                placeholder="Find a rate"
+                onInput={setSearchRoomRate}
+                allowClear
+              /> */}
+
+              <div className="space-y-2 max-h-[300px] overflow-auto">
+                {/* filter by is weekday or weekend */}
+                {getRoomsRates.data
+                  .filter(
+                    ({ dayType }) =>
+                      dayType === "all" || dayType === currentDayType
+                  )
+                  .map((rate) => (
+                    <div
+                      key={rate.rateId}
+                      className={`border rounded-lg p-2 cursor-pointer transition-all hover:bg-red-50 ${
+                        selectedRate?.rateId === rate.rateId
+                          ? "border-red-500 ring-2 ring-red-200 bg-red-50"
+                          : "border-gray-200"
+                      }`}
+                      onClick={() => setSelectedRate(rate)}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div className=" flex flex-col space-y-0">
+                          <span className="font-medium text-gray-900">
+                            {rate.rateTypeName}
+                          </span>
+                          <small className=" text-gray-500">
+                            {rate.duration} hour{rate.duration > 1 && "s"}
+                          </small>
+                        </div>
+                        <div className="text-right flex flex-col space-y-0">
+                          <span className="text-lg font-bold text-red-600">
+                            {formatCurrency(rate.baseRate * rate.duration)}
+                          </span>
+                          <small className=" text-gray-500">
+                            {formatCurrency(rate.baseRate)} / hour
+                          </small>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             </div>
 
@@ -984,19 +942,19 @@ const RoomBooking = () => {
         currency: "PHP",
         paymentMethod: bookingData.payment.method,
         source: "walk-in",
-        createdBy: "staff", // This should come from authenticated user
+        createdBy: userData.userId,
       };
 
       // Prepare additional charges payload
       const additionalCharges = bookingData.services.map((service) => ({
         serviceId: service.serviceId,
-        chargeType: "service",
+        chargeType: service.serviceType,
         itemDescription: service.serviceName,
         quantity: service.quantity || 1,
         unitPrice: service.basePrice,
         totalAmount: service.totalAmount,
         appliedAt: new Date().toISOString(),
-        appliedBy: "staff",
+        appliedBy: userData.userId,
         status: "applied",
       }));
 
