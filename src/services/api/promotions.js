@@ -22,7 +22,7 @@ const handleApiError = (error) => {
   throw new Error(error.message || "An unexpected error occurred");
 };
 
-// Get all users
+// Get all promotions
 export const getAllPromotions = async () => {
   try {
     const result = await axiosDefault.get("/api/promotions");
