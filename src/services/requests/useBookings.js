@@ -5,6 +5,7 @@ import {
   checkInBookingApi,
   checkOutBookingApi,
   getBookingByReferenceApi,
+  getBookingByRoomIdApi,
   getBookingsApi,
   updateBookingApi,
 } from "../api/bookingsApi";
@@ -25,7 +26,18 @@ export const useGetBookings = (filters = {}) => {
   });
 };
 
-// Get booking by reference
+// Get booking by roomId
+export const useGetBookingByRoomId = (roomId, options = {}) => {
+  return useQuery({
+    queryKey: ["getBookingByRoomIdApiKey"],
+    queryFn: () => getBookingByRoomIdApi(roomId),
+    placeholderData: null,
+    enabled: !!roomId,
+    staleTime: 2 * 60 * 1000,
+    ...options,
+  });
+};
+
 export const useGetBookingByReference = (reference, options = {}) => {
   return useQuery({
     queryKey: ["booking"],

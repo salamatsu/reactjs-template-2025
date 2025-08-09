@@ -81,8 +81,6 @@ const showNotification = (type, title, message) => {
   }, 3000);
 };
 
-const formatCurrency = (amount) => `₱${amount?.toLocaleString()}`;
-
 const getCurrentDayType = () => {
   const day = new Date().getDay();
   return day === 0 || day === 6 ? "weekend" : "weekday";
