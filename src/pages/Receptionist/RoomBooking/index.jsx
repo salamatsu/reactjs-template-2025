@@ -1,19 +1,43 @@
 import {
+  Alert,
+  Button,
+  Card,
+  Checkbox,
+  Collapse,
+  Divider,
+  Image,
+  Input,
+  InputNumber,
+  Modal,
+  notification,
+  Select,
+  Tag,
+  Typography,
+} from "antd";
+import {
   AlertCircle,
   Bed,
+  Calculator,
   CheckCircle,
   Clock,
   CreditCard,
+  Gift,
+  Plus,
+  Receipt,
   User,
   Users,
   XCircle,
 } from "lucide-react";
-import React, { memo, useCallback, useMemo, useState } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useGetPromotionByPromoCode } from "../../../services/requests/usePromotions";
 import {
   useGetRoomsByBranch,
   useGetRoomsRates,
 } from "../../../services/requests/useRooms";
-import { Button, Image, InputNumber, Modal, Select } from "antd";
+import { useReceptionistAuthStore } from "../../../store/hotelStore";
+
+const { Text, Title } = Typography;
+const { Panel } = Collapse;
 
 // Constants
 const ROOM_STATUSES = {
@@ -52,42 +76,102 @@ const STATUS_CONFIGS = {
   },
 };
 
+const PAYMENT_METHODS = [
+  { value: "cash", label: "Cash" },
+  { value: "credit_card", label: "Credit Card" },
+  { value: "debit_card", label: "Debit Card" },
+  { value: "gcash", label: "GCash" },
+  { value: "paymaya", label: "PayMaya" },
+  { value: "bank_transfer", label: "Bank Transfer" },
+];
+
+// Mock data for development
+const mockPromotions = [
+  {
+    promoId: 1,
+    promoCode: "WELCOME50",
+    promoName: "Welcome Discount",
+    promoType: "percentage",
+    discountValue: 10,
+    minimumStayHours: 3,
+    applicableRoomTypes: [1, 2],
+    applicableBranches: [1, 2],
+    usageLimit: 5,
+    currentUsage: 3,
+    dayTypeRestrictions: ["weekday", "weekend"],
+    validFrom: "2024-01-01",
+    validTo: "2024-12-31",
+    isActive: true,
+  },
+  {
+    promoId: 2,
+    promoCode: "SUMMER20",
+    promoName: "Summer Offer",
+    promoType: "fixed",
+    discountValue: 20,
+    minimumStayHours: 3,
+    applicableRoomTypes: [1, 2],
+    applicableBranches: [1, 2],
+    usageLimit: 5,
+    currentUsage: 3,
+    dayTypeRestrictions: ["weekday", "weekend"],
+    validFrom: "2024-01-01",
+    validTo: "2024-12-31",
+    isActive: true,
+  },
+];
+
+const mockAdditionalServices = [
+  {
+    serviceId: 1,
+    serviceName: "Extra Towel",
+    serviceType: "amenity",
+    basePrice: 50,
+    isPerItem: true,
+    isActive: true,
+  },
+  {
+    serviceId: 2,
+    serviceName: "Room Service",
+    serviceType: "service",
+    basePrice: 150,
+    isPerItem: false,
+    isActive: true,
+  },
+  {
+    serviceId: 3,
+    serviceName: "Late Checkout",
+    serviceType: "extension",
+    basePrice: 200,
+    isPerItem: false,
+    isActive: true,
+  },
+  {
+    serviceId: 4,
+    serviceName: "Minibar Restock",
+    serviceType: "amenity",
+    basePrice: 300,
+    isPerItem: false,
+    isActive: true,
+  },
+];
+
 // Utility functions
-const showNotification = (type, title, message) => {
-  const colors = {
-    success: "bg-green-100 border-green-400 text-green-700",
-    error: "bg-red-100 border-red-400 text-red-700",
-    warning: "bg-yellow-100 border-yellow-400 text-yellow-700",
-  };
-
-  // Create notification element
-  const notification = document.createElement("div");
-  notification.className = `fixed top-4 right-4 p-4 border rounded-lg shadow-lg z-50 ${
-    colors[type] || colors.error
-  }`;
-  notification.innerHTML = `
-    <div class="font-bold">${title}</div>
-    <div>${message}</div>
-  `;
-
-  document.body.appendChild(notification);
-
-  // Remove after 3 seconds
-  setTimeout(() => {
-    if (notification.parentNode) {
-      notification.parentNode.removeChild(notification);
-    }
-  }, 3000);
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
 };
-
-const formatCurrency = (amount) => `₱${amount?.toLocaleString()}`;
 
 const getCurrentDayType = () => {
   const day = new Date().getDay();
   return day === 0 || day === 6 ? "weekend" : "weekday";
 };
 
-// Memoized Components
+// Enhanced Components
 const StatusTag = memo(({ status }) => {
   const config = STATUS_CONFIGS[status];
   if (!config) return null;
@@ -102,21 +186,675 @@ const StatusTag = memo(({ status }) => {
   );
 });
 
+const PromoCodeInput = memo(
+  ({ selectedRoom, onApplyPromo, appliedPromo, onRemovePromo }) => {
+    const [promoCode, setPromoCode] = useState("");
+    // const [isValidating, setIsValidating] = useState(false);
+    const getPromotionByPromoCode = useGetPromotionByPromoCode();
+
+    console.log("getPromotionByPromoCode", getPromotionByPromoCode.data);
+    const handleApplyPromo = async () => {
+      if (!promoCode.trim()) {
+        notification.error({
+          message: "Invalid Promo Code",
+          description: "Please enter a promo code",
+        });
+        return;
+      }
+
+      getPromotionByPromoCode.mutate(
+        {
+          promoCode,
+          roomTypeId: selectedRoom.roomTypeId,
+        },
+        {
+          onSuccess: ({ data }) => {
+            if (data) {
+              onApplyPromo(data);
+              setPromoCode("");
+              notification.success({
+                message: "Promo Applied!",
+                description: `${data.promoName} has been applied successfully`,
+              });
+            } else {
+              notification.error({
+                message: "Invalid Promo Code",
+                description:
+                  "The promo code you entered is not valid or has expired",
+              });
+            }
+          },
+          onError: (error) => {
+            notification.error({
+              message: "Invalid Promo Code",
+              description: error.message,
+            });
+          },
+        }
+      );
+    };
+
+    if (appliedPromo) {
+      return (
+        <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center gap-2">
+            <Gift className="w-4 h-4 text-green-600" />
+            <div>
+              <Text strong className="text-green-800">
+                {appliedPromo.promoCode}
+              </Text>
+              <div className="text-xs text-green-600">
+                {appliedPromo.promoName}
+              </div>
+              {/* discount value */}
+              <div className="text-xs text-green-600">
+                Discount:{" "}
+                {appliedPromo.promoType === "percentage"
+                  ? `${appliedPromo.discountValue}%`
+                  : formatCurrency(appliedPromo.discountValue)}
+              </div>
+            </div>
+          </div>
+          <Button
+            size="small"
+            type="text"
+            danger
+            icon={<XCircle className="w-3 h-3" />}
+            onClick={onRemovePromo}
+          >
+            Remove
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <div className=" flex flex-col gap-3">
+        <div className="flex gap-2">
+          <Input
+            placeholder="Enter promo code"
+            value={promoCode}
+            onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+            onPressEnter={handleApplyPromo}
+            prefix={<Gift className="w-4 h-4 text-gray-400" />}
+          />
+          <Button
+            type="primary"
+            loading={getPromotionByPromoCode.isPending}
+            onClick={handleApplyPromo}
+            disabled={!promoCode.trim()}
+          >
+            Apply
+          </Button>
+        </div>
+        {getPromotionByPromoCode.error && (
+          <Alert
+            message={getPromotionByPromoCode.error?.message}
+            type="warning"
+            closable
+          />
+        )}
+      </div>
+    );
+  }
+);
+
+const AdditionalServicesSelector = memo(
+  ({ selectedServices, onServicesChange }) => {
+    const [availableServices] = useState(mockAdditionalServices);
+
+    const handleServiceToggle = (service, checked) => {
+      if (checked) {
+        const newService = {
+          ...service,
+          quantity: 1,
+          totalAmount: service.basePrice,
+        };
+        onServicesChange([...selectedServices, newService]);
+      } else {
+        onServicesChange(
+          selectedServices.filter((s) => s.serviceId !== service.serviceId)
+        );
+      }
+    };
+
+    const handleQuantityChange = (serviceId, quantity) => {
+      onServicesChange(
+        selectedServices.map((service) =>
+          service.serviceId === serviceId
+            ? {
+                ...service,
+                quantity,
+                totalAmount: service.basePrice * quantity,
+              }
+            : service
+        )
+      );
+    };
+
+    const isServiceSelected = (serviceId) => {
+      return selectedServices.some((s) => s.serviceId === serviceId);
+    };
+
+    const getSelectedService = (serviceId) => {
+      return selectedServices.find((s) => s.serviceId === serviceId);
+    };
+
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 mb-3">
+          <Plus className="w-4 h-4 text-gray-600" />
+          <Text strong>Additional Services</Text>
+        </div>
+
+        {availableServices.map((service) => {
+          const isSelected = isServiceSelected(service.serviceId);
+          const selectedService = getSelectedService(service.serviceId);
+
+          return (
+            <div key={service.serviceId} className="border rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={isSelected}
+                    onChange={(e) =>
+                      handleServiceToggle(service, e.target.checked)
+                    }
+                  />
+                  <div>
+                    <Text strong>{service.serviceName}</Text>
+                    <div className="text-xs text-gray-500 capitalize">
+                      {service.serviceType}
+                    </div>
+                  </div>
+                </div>
+                <Text strong className="text-blue-600">
+                  {formatCurrency(service.basePrice)}
+                  {service.isPerItem ? "/item" : ""}
+                </Text>
+              </div>
+
+              {isSelected && service.isPerItem && (
+                <div className="flex items-center gap-2 mt-2">
+                  <Text className="text-sm">Quantity:</Text>
+                  <InputNumber
+                    min={1}
+                    max={10}
+                    value={selectedService?.quantity || 1}
+                    onChange={(value) =>
+                      handleQuantityChange(service.serviceId, value)
+                    }
+                    size="small"
+                  />
+                  <Text className="text-sm text-gray-500">
+                    Total:{" "}
+                    {formatCurrency(
+                      selectedService?.totalAmount || service.basePrice
+                    )}
+                  </Text>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+);
+
+const PaymentSummary = memo(
+  ({ baseAmount, appliedPromo, selectedServices, taxRate = 0.12 }) => {
+    const calculations = useMemo(() => {
+      const servicesTotal = selectedServices.reduce(
+        (sum, service) => sum + service.totalAmount,
+        0
+      );
+      const subtotal = baseAmount + servicesTotal;
+
+      let discountAmount = 0;
+      if (appliedPromo) {
+        if (appliedPromo.promoType === "percentage") {
+          discountAmount = (subtotal * appliedPromo.discountValue) / 100;
+        } else {
+          discountAmount = Math.min(appliedPromo.discountValue, subtotal);
+        }
+      }
+
+      const discountedSubtotal = subtotal - discountAmount;
+      const taxAmount = discountedSubtotal * taxRate;
+      const totalAmount = discountedSubtotal + taxAmount;
+
+      return {
+        baseAmount,
+        servicesTotal,
+        subtotal,
+        discountAmount,
+        taxAmount,
+        totalAmount,
+      };
+    }, [baseAmount, appliedPromo, selectedServices, taxRate]);
+
+    return (
+      <div className="bg-gray-50 rounded-lg p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Receipt className="w-4 h-4 text-gray-600" />
+          <Text strong>Payment Summary</Text>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex justify-between">
+            <Text>Room Rate</Text>
+            <Text>{formatCurrency(calculations.baseAmount)}</Text>
+          </div>
+
+          {selectedServices.length > 0 && (
+            <>
+              <div className="flex justify-between">
+                <Text>Additional Services</Text>
+                <Text>{formatCurrency(calculations.servicesTotal)}</Text>
+              </div>
+              <div className="ml-4 space-y-1">
+                {selectedServices.map((service) => (
+                  <div
+                    key={service.serviceId}
+                    className="flex justify-between text-sm text-gray-600"
+                  >
+                    <Text>
+                      {service.serviceName}
+                      {service.isPerItem && ` × ${service.quantity}`}
+                    </Text>
+                    <Text>{formatCurrency(service.totalAmount)}</Text>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          <div className="flex justify-between">
+            <Text>Subtotal</Text>
+            <Text>{formatCurrency(calculations.subtotal)}</Text>
+          </div>
+
+          {appliedPromo && calculations.discountAmount > 0 && (
+            <div className="flex justify-between text-green-600">
+              <Text>
+                Discount ({appliedPromo.promoCode})
+                {appliedPromo.promoType === "percentage" &&
+                  ` - ${appliedPromo.discountValue}%`}
+              </Text>
+              <Text>-{formatCurrency(calculations.discountAmount)}</Text>
+            </div>
+          )}
+
+          <div className="flex justify-between text-sm text-gray-600">
+            <Text>Tax ({(taxRate * 100).toFixed(0)}%)</Text>
+            <Text>{formatCurrency(calculations.taxAmount)}</Text>
+          </div>
+
+          <Divider className="my-2" />
+
+          <div className="flex justify-between">
+            <Text strong className="text-lg">
+              Total Amount
+            </Text>
+            <Text strong className="text-lg text-blue-600">
+              {formatCurrency(calculations.totalAmount)}
+            </Text>
+          </div>
+        </div>
+      </div>
+    );
+  }
+);
+
+const EnhancedBookingModal = memo(
+  ({
+    open,
+    selectedRoom,
+    selectedRate,
+    bookingDetails,
+    appliedPromo,
+    selectedServices,
+    onClose,
+    onConfirm,
+  }) => {
+    const [paymentMethod, setPaymentMethod] = useState("cash");
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    if (!selectedRoom || !selectedRate) return null;
+
+    const baseAmount = selectedRate.baseRate * selectedRate.duration;
+    const servicesTotal = selectedServices.reduce(
+      (sum, service) => sum + service.totalAmount,
+      0
+    );
+    const subtotal = baseAmount + servicesTotal;
+
+    let discountAmount = 0;
+    if (appliedPromo) {
+      if (appliedPromo.promoType === "percentage") {
+        discountAmount = (subtotal * appliedPromo.discountValue) / 100;
+      } else {
+        discountAmount = Math.min(appliedPromo.discountValue, subtotal);
+      }
+    }
+
+    const taxAmount = (subtotal - discountAmount) * 0.12;
+    const totalAmount = subtotal - discountAmount + taxAmount;
+
+    const handleConfirmPayment = () => {
+      setIsProcessing(true);
+
+      const bookingData = {
+        room: selectedRoom,
+        rate: selectedRate,
+        details: bookingDetails,
+        promo: appliedPromo,
+        services: selectedServices,
+        payment: {
+          method: paymentMethod,
+          baseAmount,
+          discountAmount,
+          taxAmount,
+          totalAmount,
+        },
+      };
+
+      // Simulate payment processing
+      setTimeout(() => {
+        onConfirm(bookingData);
+        setIsProcessing(false);
+      }, 2000);
+    };
+
+    return (
+      <Modal
+        open={open}
+        centered
+        width={600}
+        closeIcon={false}
+        footer={
+          <div className="flex gap-3">
+            <Button
+              block
+              size="large"
+              onClick={onClose}
+              disabled={isProcessing}
+            >
+              Cancel
+            </Button>
+            <Button
+              block
+              size="large"
+              type="primary"
+              loading={isProcessing}
+              onClick={handleConfirmPayment}
+              icon={<CreditCard className="w-4 h-4" />}
+            >
+              {isProcessing
+                ? "Processing Payment..."
+                : `Pay ${formatCurrency(totalAmount)}`}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="text-center border-b pb-4">
+            <h2 className="text-xl font-bold text-gray-900">
+              Confirm Booking & Payment
+            </h2>
+            <Text className="text-gray-600">
+              Review your booking details and complete payment
+            </Text>
+          </div>
+
+          {/* Booking Details */}
+          <Card size="small" title="Booking Details">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <Text className="text-gray-600">Room:</Text>
+                <div className="font-medium">
+                  {selectedRoom.roomNumber} - {selectedRoom.roomTypeName}
+                </div>
+              </div>
+              <div>
+                <Text className="text-gray-600">Guests:</Text>
+                <div className="font-medium">{bookingDetails.guests}</div>
+              </div>
+              <div>
+                <Text className="text-gray-600">Rate:</Text>
+                <div className="font-medium">{selectedRate.rateTypeName}</div>
+              </div>
+              <div>
+                <Text className="text-gray-600">Duration:</Text>
+                <div className="font-medium">{selectedRate.duration}</div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Payment Method */}
+          <Card size="small" title="Payment Method">
+            <Select
+              value={paymentMethod}
+              onChange={setPaymentMethod}
+              className="w-full"
+              options={PAYMENT_METHODS}
+            />
+          </Card>
+
+          {/* Payment Summary */}
+          <PaymentSummary
+            baseAmount={baseAmount}
+            appliedPromo={appliedPromo}
+            selectedServices={selectedServices}
+          />
+        </div>
+      </Modal>
+    );
+  }
+);
+
+const EnhancedBookingForm = memo(
+  ({ selectedRoom, bookingDetails, onBookingChange, onBook }) => {
+    const [selectedRate, setSelectedRate] = useState(null);
+    const [appliedPromo, setAppliedPromo] = useState(null);
+    const [selectedServices, setSelectedServices] = useState([]);
+    const getRoomsRates = useGetRoomsRates(
+      selectedRoom.roomTypeId,
+      selectedRoom.branchId
+    );
+
+    useEffect(() => {
+      setSelectedRate(null);
+      setAppliedPromo(null);
+    }, [selectedRoom]);
+
+    const handleBookClick = useCallback(() => {
+      if (!selectedRate) {
+        notification.error({
+          message: "Rate Required",
+          description: "Please select a rate before booking.",
+        });
+        return;
+      }
+      onBook(selectedRate, appliedPromo, selectedServices);
+    }, [selectedRate, appliedPromo, selectedServices, onBook]);
+
+    const totalAmount = useMemo(() => {
+      if (!selectedRate) return 0;
+
+      const baseAmount = selectedRate.baseRate * selectedRate.duration;
+      const servicesTotal = selectedServices.reduce(
+        (sum, service) => sum + service.totalAmount,
+        0
+      );
+      const subtotal = baseAmount + servicesTotal;
+
+      let discountAmount = 0;
+      if (appliedPromo) {
+        if (appliedPromo.promoType === "percentage") {
+          discountAmount = (subtotal * appliedPromo.discountValue) / 100;
+        } else {
+          discountAmount = Math.min(appliedPromo.discountValue, subtotal);
+        }
+      }
+
+      const taxAmount = (subtotal - discountAmount) * 0.12;
+      return subtotal - discountAmount + taxAmount;
+    }, [selectedRate, selectedServices, appliedPromo]);
+
+    return (
+      <div className="bg-white rounded-lg shadow-sm border">
+        <div className="p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">
+            Book Room {selectedRoom.roomNumber}
+          </h2>
+
+          {/* Room Image and Details */}
+          <div className="mb-6">
+            <Image
+              src={selectedRoom?.imageUrl}
+              alt={selectedRoom?.roomTypeName}
+              className="w-full h-32 object-cover rounded-lg mb-3"
+              fallback="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzlmYTZiNyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9IjAuM2VtIj5Sb29tIEltYWdlPC90ZXh0Pjwvc3ZnPg=="
+            />
+            <h3 className="text-lg font-medium text-gray-900">
+              {selectedRoom?.roomTypeName}
+            </h3>
+            <p className="text-sm text-gray-600 mt-1">
+              {selectedRoom?.description}
+            </p>
+          </div>
+
+          <div className="space-y-6">
+            {/* Guest Count */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                <User className="w-4 h-4" />
+                Number of Guests
+              </label>
+              <InputNumber
+                style={{ width: "100%" }}
+                min={1}
+                max={selectedRoom?.maxOccupancy || 2}
+                value={bookingDetails.guests}
+                onChange={(value) => onBookingChange("guests", value)}
+                size="large"
+                controls
+              />
+            </div>
+
+            {/* Rate Selection */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+                <CreditCard className="w-4 h-4" />
+                Select Rate
+              </label>
+              <div className="space-y-3">
+                {getRoomsRates.data.map((rate) => (
+                  <div
+                    key={rate.rateId}
+                    className={`border rounded-lg p-4 cursor-pointer transition-all hover:bg-red-50 ${
+                      selectedRate?.rateId === rate.rateId
+                        ? "border-red-500 ring-2 ring-red-200 bg-red-50"
+                        : "border-gray-200"
+                    }`}
+                    onClick={() => setSelectedRate(rate)}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {rate.rateTypeName}
+                        </p>
+                        <p className="text-sm text-gray-500">{rate.duration}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-red-600">
+                          {formatCurrency(rate.baseRate * rate.duration)}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {formatCurrency(rate.baseRate)} / hour
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Promo Code */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+                <Gift className="w-4 h-4" />
+                Promo Code
+              </label>
+              <PromoCodeInput
+                selectedRoom={selectedRoom}
+                onApplyPromo={setAppliedPromo}
+                appliedPromo={appliedPromo}
+                onRemovePromo={() => setAppliedPromo(null)}
+              />
+            </div>
+
+            {/* Additional Services */}
+            <Collapse ghost>
+              <Panel
+                header={
+                  <div className="flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    <span>Additional Services</span>
+                    {selectedServices.length > 0 && (
+                      <Tag color="blue">{selectedServices.length} selected</Tag>
+                    )}
+                  </div>
+                }
+                key="services"
+              >
+                <AdditionalServicesSelector
+                  selectedServices={selectedServices}
+                  onServicesChange={setSelectedServices}
+                />
+              </Panel>
+            </Collapse>
+
+            {/* Payment Summary */}
+            {selectedRate && (
+              <PaymentSummary
+                baseAmount={selectedRate.baseRate * selectedRate.duration}
+                appliedPromo={appliedPromo}
+                selectedServices={selectedServices}
+              />
+            )}
+
+            {/* Book Button */}
+            <Button
+              block
+              size="large"
+              type="primary"
+              disabled={!selectedRate}
+              onClick={handleBookClick}
+              icon={<Calculator className="w-4 h-4" />}
+            >
+              {selectedRate
+                ? `Book for ${formatCurrency(totalAmount)}`
+                : "Select a Rate to Continue"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+);
+
 const RoomCard = memo(({ room, isSelected, onSelect }) => {
   const isAvailable = room.roomStatus === ROOM_STATUSES.AVAILABLE;
-
-  const handleClick = useCallback(() => {
-    onSelect(room);
-  }, [onSelect, room]);
 
   return (
     <div
       className={`bg-white rounded-lg shadow-sm border-2 transition-all cursor-pointer hover:shadow-md hover:scale-105 hover:border-red-400 duration-500 ${
-        isSelected
-          ? "border-primary-color ring-2 ring-red-200"
-          : "border-gray-200"
+        isSelected ? "border-red-500 ring-2 ring-red-200" : "border-gray-200"
       } ${!isAvailable ? "opacity-75" : ""}`}
-      onClick={handleClick}
+      onClick={() => onSelect(room)}
     >
       <div className="p-4">
         <div className="flex items-center justify-between mb-3">
@@ -138,263 +876,11 @@ const RoomCard = memo(({ room, isSelected, onSelect }) => {
           </div>
           <p className="text-sm text-gray-600">{room.roomSize}</p>
         </div>
-
-        {room.notes && (
-          <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-            {room.notes}
-          </div>
-        )}
       </div>
     </div>
   );
 });
 
-const RateCard = memo(({ rate, isSelected, onSelect }) => (
-  <div
-    className={`bg-blue-50 border rounded-lg p-4 cursor-pointer transition-all hover:bg-blue-100 ${
-      isSelected
-        ? "border-primary-color ring-2 ring-red-200"
-        : "border-gray-200"
-    }`}
-    onClick={() => onSelect(rate)}
-  >
-    <div className="flex justify-between items-center">
-      <div>
-        <p className="font-medium text-gray-900">{rate.rateTypeName}</p>
-      </div>
-      <div>
-        <p className="text-2xl font-bold text-primary-color">
-          {formatCurrency(rate.rate || rate.baseRate)}
-        </p>
-      </div>
-    </div>
-  </div>
-));
-
-const RoomGrid = memo(({ groupedRooms, selectedRoom, onRoomSelect }) => (
-  <div className="space-y-6">
-    {Object.keys(groupedRooms).length === 0 ? (
-      <div className="text-center py-8">
-        <Bed className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-        <p className="text-gray-500 text-lg">
-          No rooms match your current filters
-        </p>
-        <p className="text-gray-400 text-sm mt-2">
-          Try adjusting your filter criteria
-        </p>
-      </div>
-    ) : (
-      Object.keys(groupedRooms)
-        .sort()
-        .map((floor) => (
-          <div key={floor}>
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">
-              Floor {floor}
-              <span className="ml-2 text-base font-normal text-gray-500">
-                ({groupedRooms[floor].length} room
-                {groupedRooms[floor].length !== 1 ? "s" : ""})
-              </span>
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {groupedRooms[floor].map((room) => (
-                <RoomCard
-                  key={room.roomId}
-                  room={room}
-                  isSelected={selectedRoom?.roomId === room.roomId}
-                  onSelect={onRoomSelect}
-                />
-              ))}
-            </div>
-          </div>
-        ))
-    )}
-  </div>
-));
-
-const BookingModal = memo(
-  ({
-    open = false,
-    selectedRoom,
-    selectedRate,
-    bookingDetails,
-    onClose,
-    onConfirm,
-  }) => {
-    if (!selectedRoom || !selectedRate) return null;
-
-    const total = selectedRate.rate || selectedRate.baseRate;
-    const checkInTime = new Date().toLocaleString();
-
-    return (
-      <Modal
-        open={open}
-        centered
-        closeIcon={false}
-        footer={
-          <div className="flex gap-3">
-            <Button block size="large" danger type="default" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              block
-              size="large"
-              type="primary"
-              onClick={onConfirm(selectedRoom, selectedRate, bookingDetails)}
-            >
-              Confirm Booking
-            </Button>
-          </div>
-        }
-      >
-        <h2 className="text-xl font-bold text-gray-900 mb-4">
-          Confirm Booking
-        </h2>
-
-        <div className="space-y-4 mb-6">
-          <div className="flex justify-between">
-            <p className="text-sm text-gray-600">Room</p>
-            <p className="font-medium">
-              {selectedRoom.roomNumber} - {selectedRoom.roomTypeName}
-            </p>
-          </div>
-
-          <div className="flex justify-between">
-            <p className="text-sm text-gray-600">Rate</p>
-            <p className="font-medium">{selectedRate.rateTypeName}</p>
-          </div>
-
-          <div className="flex justify-between">
-            <p className="text-sm text-gray-600">Guests</p>
-            <p className="font-medium">{bookingDetails.guests}</p>
-          </div>
-
-          <div className="flex justify-between">
-            <p className="text-sm text-gray-600">Check-in Time</p>
-            <p className="font-medium text-sm">{checkInTime}</p>
-          </div>
-
-          <div className="border-t pt-4">
-            <div className="flex justify-between items-center">
-              <p className="text-lg font-semibold">Total Amount</p>
-              <p className="text-2xl font-bold text-primary-color">
-                {formatCurrency(total)}
-              </p>
-            </div>
-          </div>
-        </div>
-      </Modal>
-    );
-  }
-);
-
-const BookingForm = memo(
-  ({ selectedRoom, bookingDetails, onBookingChange, onBook }) => {
-    const [selectedRate, setSelectedRate] = useState(null);
-    const getRoomsRates = useGetRoomsRates(
-      selectedRoom.roomTypeId,
-      selectedRoom.branchId
-    );
-
-    const handleBookClick = useCallback(() => {
-      if (!selectedRate) {
-        showNotification(
-          "error",
-          "Rate Required",
-          "Please select a rate before booking."
-        );
-        return;
-      }
-      onBook(selectedRate);
-    }, [selectedRate, onBook]);
-
-    return (
-      <div className="bg-white rounded-lg shadow-sm border p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">
-          Book Room {selectedRoom.roomNumber}
-        </h2>
-
-        <div className="mb-6">
-          <Image
-            src={selectedRoom?.imageUrl}
-            alt={selectedRoom?.roomTypeName}
-            className="w-full h-32 object-cover rounded-lg mb-3"
-            onError={(e) => {
-              e.target.src =
-                "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzlmYTZiNyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9IjAuM2VtIj5Sb29tIEltYWdlPC90ZXh0Pjwvc3ZnPg==";
-            }}
-          />
-          <h3 className="text-lg font-medium text-gray-900">
-            {selectedRoom?.roomTypeName}
-          </h3>
-          <p className="text-sm text-gray-600 mt-1">
-            {selectedRoom?.description}
-          </p>
-        </div>
-
-        <div className="space-y-6">
-          <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-              <User className="w-4 h-4" />
-              Number of Guests
-            </label>
-
-            <InputNumber
-              style={{ width: "100%" }}
-              min={1}
-              max={selectedRoom?.maxOccupancy || 2}
-              value={bookingDetails.guests}
-              onChange={(value) => onBookingChange("guests", value)}
-              size="large"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Maximum {selectedRoom?.maxOccupancy} guests allowed
-            </p>
-          </div>
-
-          <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
-              <CreditCard className="w-4 h-4" />
-              Select Rate
-            </label>
-            <div className="space-y-3">
-              {getRoomsRates.data.length === 0 ? (
-                <div className="text-center py-4 text-gray-500">
-                  <CreditCard className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                  <p>No rates available for this room type</p>
-                </div>
-              ) : (
-                getRoomsRates.data.map((rate) => (
-                  <RateCard
-                    key={rate.rateTypeId}
-                    rate={rate}
-                    isSelected={selectedRate?.rateTypeId === rate.rateTypeId}
-                    onSelect={setSelectedRate}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-
-          <Button
-            block
-            size="large"
-            type="primary"
-            disabled={getRoomsRates.data.length === 0 || !selectedRate}
-            onClick={handleBookClick}
-          >
-            {selectedRate
-              ? `Book for ${formatCurrency(
-                  selectedRate.rate || selectedRate.baseRate
-                )}`
-              : "Select a Rate to Continue"}
-          </Button>
-        </div>
-      </div>
-    );
-  }
-);
-
-// Custom hooks
 const useFilters = () => {
   const [filters, setFilters] = useState({
     floor: "all",
@@ -409,172 +895,27 @@ const useFilters = () => {
   return [filters, updateFilter];
 };
 
-const useBooking = () => {
+const RoomBooking = () => {
+  const [filters, updateFilter] = useFilters();
+  const { userData } = useReceptionistAuthStore();
+
   const [selectedRoom, setSelectedRoom] = useState(null);
+
+  const [selectedRoomNotAvailable, setSelectedRoomNotAvailable] =
+    useState(null);
+
   const [bookingDetails, setBookingDetails] = useState({
     dayType: getCurrentDayType(),
     guests: 2,
   });
-
-  const updateBookingDetails = useCallback((field, value) => {
-    setBookingDetails((prev) => ({ ...prev, [field]: value }));
-  }, []);
-
-  const resetBooking = useCallback(() => {
-    setSelectedRoom(null);
-    setBookingDetails({
-      dayType: getCurrentDayType(),
-      guests: 2,
-    });
-  }, []);
-
-  return {
-    selectedRoom,
-    setSelectedRoom,
-    bookingDetails,
-    updateBookingDetails,
-    resetBooking,
-  };
-};
-
-// Statistics component
-const RoomStats = memo(({ rooms }) => {
-  const stats = useMemo(() => {
-    const available = rooms.filter(
-      (r) => r.roomStatus === ROOM_STATUSES.AVAILABLE
-    ).length;
-    const occupied = rooms.filter(
-      (r) => r.roomStatus === ROOM_STATUSES.OCCUPIED
-    ).length;
-    const maintenance = rooms.filter(
-      (r) => r.roomStatus === ROOM_STATUSES.MAINTENANCE
-    ).length;
-    const cleaning = rooms.filter(
-      (r) => r.roomStatus === ROOM_STATUSES.CLEANING
-    ).length;
-    const reserved = rooms.filter(
-      (r) => r.roomStatus === ROOM_STATUSES.RESERVED
-    ).length;
-
-    return {
-      available,
-      occupied,
-      maintenance,
-      cleaning,
-      reserved,
-      total: rooms.length,
-    };
-  }, [rooms]);
-
-  return (
-    <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">
-        Room Statistics
-      </h2>
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <div className="text-center">
-          <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-          <div className="text-sm text-gray-600">Total Rooms</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-green-600">
-            {stats.available}
-          </div>
-          <div className="text-sm text-gray-600">Available</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-red-600">
-            {stats.occupied}
-          </div>
-          <div className="text-sm text-gray-600">Occupied</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-blue-600">
-            {stats.reserved}
-          </div>
-          <div className="text-sm text-gray-600">Reserved</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-yellow-600">
-            {stats.cleaning}
-          </div>
-          <div className="text-sm text-gray-600">Cleaning</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-gray-600">
-            {stats.maintenance}
-          </div>
-          <div className="text-sm text-gray-600">Maintenance</div>
-        </div>
-      </div>
-    </div>
-  );
-});
-
-// Main Component
-const RoomBooking = () => {
-  const [filters, updateFilter] = useFilters();
   const [showBookingModal, setShowBookingModal] = useState(false);
-  const [selectedRate, setSelectedRate] = useState(null);
+  const [currentBookingData, setCurrentBookingData] = useState(null);
 
-  const {
-    selectedRoom,
-    setSelectedRoom,
-    bookingDetails,
-    updateBookingDetails,
-    resetBooking,
-  } = useBooking();
+  const getRoomsByBranch = useGetRoomsByBranch(userData.branchId);
 
-  const getRoomsByBranch = useGetRoomsByBranch(1);
-
-  const roomTypes = useMemo(() => {
-    return getRoomsByBranch.data.reduce((acc, { roomTypeName, roomTypeId }) => {
-      if (!acc.find((item) => item.roomTypeId === roomTypeId)) {
-        acc.push({ roomTypeName, roomTypeId });
-      }
-      return acc;
-    }, []);
-  }, [getRoomsByBranch.data]);
-
-  const filteredRooms = useMemo(
-    () =>
-      getRoomsByBranch.data
-        .filter(
-          (room) => filters.floor === "all" || room.floor === filters.floor
-        )
-        .filter(
-          (room) =>
-            filters.roomType === "all" ||
-            room.roomTypeId === parseInt(filters.roomType)
-        )
-        .filter(
-          (room) =>
-            filters.status === "all" || room.roomStatus === filters.status
-        )
-        .sort((a, b) => {
-          // Sort by floor first, then by room number
-          if (a.floor !== b.floor) {
-            return a.floor.localeCompare(b.floor);
-          }
-          return a.roomNumber.localeCompare(b.roomNumber);
-        }),
-    [getRoomsByBranch.data, filters]
-  );
-
-  const groupedRooms = useMemo(
-    () =>
-      filteredRooms.reduce((acc, room) => {
-        if (!acc[room.floor]) acc[room.floor] = [];
-        acc[room.floor].push(room);
-        return acc;
-      }, {}),
-    [filteredRooms]
-  );
-
-  const availableFloors = useMemo(
-    () => [...new Set(getRoomsByBranch.data.map((room) => room.floor))].sort(),
-    [getRoomsByBranch.data]
-  );
+  // const getBookingByRoomId = useGetBookingByRoomId(
+  //   selectedRoomNotAvailable?.roomId
+  // );
 
   const handleRoomSelect = useCallback((room) => {
     if (room.roomStatus === ROOM_STATUSES.AVAILABLE) {
@@ -594,48 +935,151 @@ const RoomBooking = () => {
 
     const message =
       statusMessages[room.roomStatus] || "Room is not available for booking.";
-    showNotification("error", "Room Unavailable", message);
+    notification.error({
+      message: "Room Unavailable",
+      description: message,
+    });
+    setSelectedRoomNotAvailable(room);
   }, []);
 
-  const handleBookRoom = useCallback((rate) => {
-    setSelectedRate(rate);
-    setShowBookingModal(true);
+  const handleBookingChange = useCallback((field, value) => {
+    setBookingDetails((prev) => ({ ...prev, [field]: value }));
   }, []);
 
-  const handleConfirmBooking = useCallback(
-    (room, rate, details) => {
-      // Simulate API call delay
-      setTimeout(() => {
-        showNotification(
-          "success",
-          "Booking Confirmed",
-          `Room ${room.roomNumber} has been successfully booked for ${details.guests} guest(s)!`
-        );
-
-        // Update room status to occupied (simulate real booking)
-        const roomIndex = mockRoomsData.findIndex(
-          (r) => r.roomId === room.roomId
-        );
-        if (roomIndex !== -1) {
-          mockRoomsData[roomIndex].roomStatus = ROOM_STATUSES.OCCUPIED;
-          mockRoomsData[
-            roomIndex
-          ].notes = `Booked at ${new Date().toLocaleTimeString()}`;
-        }
-
-        setShowBookingModal(false);
-        resetBooking();
-        setSelectedRate(null);
-      }, 1000);
+  const handleBookRoom = useCallback(
+    (selectedRate, appliedPromo, selectedServices) => {
+      setCurrentBookingData({
+        selectedRate,
+        appliedPromo,
+        selectedServices,
+      });
+      setShowBookingModal(true);
     },
-    [resetBooking]
+    []
   );
 
-  const handleClearFilters = useCallback(() => {
-    updateFilter("floor", "all");
-    updateFilter("roomType", "all");
-    updateFilter("status", "all");
-  }, [updateFilter]);
+  const handleConfirmBooking = useCallback(
+    (bookingData) => {
+      // Generate booking reference
+      const bookingReference = `BK${Date.now().toString().slice(-8)}`;
+
+      // Prepare booking payload for API
+      const bookingPayload = {
+        bookingReference,
+        branchId: selectedRoom.branchId,
+        roomId: selectedRoom.roomId,
+        roomTypeId: selectedRoom.roomTypeId,
+        rateId: bookingData.rate.rateId,
+        rateTypeId: bookingData.rate.rateTypeId,
+        numberOfGuests: bookingDetails.guests,
+        checkInDateTime: new Date().toISOString(),
+        stayDuration: bookingData.rate.duration,
+        stayDurationType: bookingData.rate.durationType,
+        bookingStatus: "confirmed",
+        paymentStatus: "paid",
+        baseAmount: bookingData.payment.baseAmount,
+        discountAmount: bookingData.payment.discountAmount,
+        taxAmount: bookingData.payment.taxAmount,
+        totalAmount: bookingData.payment.totalAmount,
+        currency: "PHP",
+        paymentMethod: bookingData.payment.method,
+        source: "walk-in",
+        createdBy: "staff", // This should come from authenticated user
+      };
+
+      // Prepare additional charges payload
+      const additionalCharges = bookingData.services.map((service) => ({
+        serviceId: service.serviceId,
+        chargeType: "service",
+        itemDescription: service.serviceName,
+        quantity: service.quantity || 1,
+        unitPrice: service.basePrice,
+        totalAmount: service.totalAmount,
+        appliedAt: new Date().toISOString(),
+        appliedBy: "staff",
+        status: "applied",
+      }));
+
+      // Here you would make API calls to:
+      // 1. POST /api/bookings - Create the booking
+      // 2. POST /api/additional-charges - Add any additional services
+      // 3. PUT /api/rooms/{roomId} - Update room status to occupied
+
+      console.log("Booking Payload:", bookingPayload);
+      console.log("Additional Charges:", additionalCharges);
+
+      // Simulate API success
+      notification.success({
+        message: "Booking Confirmed!",
+        description: `Booking ${bookingReference} has been created successfully. Room ${selectedRoom.roomNumber} is now occupied.`,
+        duration: 5,
+      });
+
+      // Update room status locally (in real app, this would come from API response)
+      setSelectedRoom((prev) => ({
+        ...prev,
+        roomStatus: ROOM_STATUSES.OCCUPIED,
+      }));
+
+      // Reset form
+      setShowBookingModal(false);
+      setSelectedRoom(null);
+      setBookingDetails({
+        dayType: getCurrentDayType(),
+        guests: 2,
+      });
+      setCurrentBookingData(null);
+    },
+    [selectedRoom, bookingDetails]
+  );
+
+  const availableRooms = getRoomsByBranch.data.filter(
+    (room) => room.roomStatus === ROOM_STATUSES.AVAILABLE
+  );
+
+  const roomTypes = getRoomsByBranch.data.reduce(
+    (acc, { roomTypeName, roomTypeId }) => {
+      if (!acc.find((item) => item.roomTypeId === roomTypeId)) {
+        acc.push({ roomTypeName, roomTypeId });
+      }
+      return acc;
+    },
+    []
+  );
+
+  const filteredRooms = useMemo(
+    () =>
+      getRoomsByBranch.data
+        .filter(
+          (room) => filters.floor === "all" || room.floor === filters.floor
+        )
+        .filter(
+          (room) =>
+            filters.roomType === "all" ||
+            room.roomTypeId === parseInt(filters.roomType)
+        )
+        .filter(
+          (room) =>
+            filters.status === "all" || room.roomStatus === filters.status
+        )
+        .sort((a, b) => a.roomNumber.localeCompare(b.roomNumber)),
+    [getRoomsByBranch.data, filters]
+  );
+
+  const groupedRooms = useMemo(
+    () =>
+      filteredRooms.reduce((acc, room) => {
+        if (!acc[room.floor]) acc[room.floor] = [];
+        acc[room.floor].push(room);
+        return acc;
+      }, {}),
+    [filteredRooms]
+  );
+
+  const availableFloors = useMemo(
+    () => [...new Set(getRoomsByBranch.data.map((room) => room.floor))].sort(),
+    [getRoomsByBranch.data]
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
@@ -643,32 +1087,76 @@ const RoomBooking = () => {
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Room Booking System
+            Room Booking
           </h1>
           <p className="text-gray-600">
-            Select and book available rooms for your guests
+            Book rooms with promo codes, additional services, and integrated
+            payment
           </p>
         </div>
 
         {/* Room Statistics */}
-        <RoomStats rooms={getRoomsByBranch.data} />
+        <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Room Overview
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-900">
+                {getRoomsByBranch.data.length}
+              </div>
+              <div className="text-sm text-gray-600">Total Rooms</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">
+                {
+                  getRoomsByBranch.data.filter(
+                    (r) => r.roomStatus === ROOM_STATUSES.AVAILABLE
+                  ).length
+                }
+              </div>
+              <div className="text-sm text-gray-600">Available</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-red-600">
+                {
+                  getRoomsByBranch.data.filter(
+                    (r) => r.roomStatus === ROOM_STATUSES.OCCUPIED
+                  ).length
+                }
+              </div>
+              <div className="text-sm text-gray-600">Occupied</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">
+                {
+                  getRoomsByBranch.data.filter(
+                    (r) => r.roomStatus === ROOM_STATUSES.RESERVED
+                  ).length
+                }
+              </div>
+              <div className="text-sm text-gray-600">Reserved</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-yellow-600">
+                {
+                  getRoomsByBranch.data.filter(
+                    (r) => r.roomStatus === ROOM_STATUSES.CLEANING
+                  ).length
+                }
+              </div>
+              <div className="text-sm text-gray-600">Cleaning</div>
+            </div>
+          </div>
+        </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Filter Rooms
-            </h2>
-            <Button type="link" ghost danger onClick={handleClearFilters}>
-              Clear All Filters
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Floor
-              </label>
-
+        <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+          <div className=" flex flex-row gap-3">
+            <div className=" flex flex-row gap-1 items-center grow">
+              <nobr>
+                <Text strong>Floor</Text>
+              </nobr>
               <Select
                 value={filters.floor}
                 onChange={(value) => updateFilter("floor", value)}
@@ -682,12 +1170,10 @@ const RoomBooking = () => {
                 ]}
               />
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Room Type
-              </label>
-
+            <div className=" flex flex-row gap-1 items-center grow">
+              <nobr>
+                <Text strong>Room Type</Text>
+              </nobr>
               <Select
                 value={filters.roomType}
                 onChange={(value) => updateFilter("roomType", value)}
@@ -702,11 +1188,10 @@ const RoomBooking = () => {
                 ]}
               />
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
+            <div className=" flex flex-row gap-1 items-center grow">
+              <nobr>
+                <Text strong>Status</Text>
+              </nobr>
               <Select
                 value={filters.status}
                 onChange={(value) => updateFilter("status", value)}
@@ -730,34 +1215,79 @@ const RoomBooking = () => {
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900">
-                  Available Rooms ({filteredRooms.length})
+                  Available Rooms ({availableRooms.length})
                 </h2>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 text-xs">
                   {Object.entries(STATUS_CONFIGS).map(([status, config]) => (
                     <div key={status} className="flex items-center gap-1">
                       {config.icon}
-                      <span className="text-xs text-gray-600">
-                        {config.label}
-                      </span>
+                      <span className="text-gray-600">{config.label}</span>
                     </div>
                   ))}
                 </div>
               </div>
-              <RoomGrid
-                groupedRooms={groupedRooms}
-                selectedRoom={selectedRoom}
-                onRoomSelect={handleRoomSelect}
-              />
+
+              {
+                getRoomsByBranch.data.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Bed className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                    <p className="text-gray-500 text-lg">No rooms available</p>
+                  </div>
+                ) : Object.keys(groupedRooms).length === 0 ? (
+                  <div className="text-center py-8">
+                    <Text type="secondary">
+                      No rooms match your current filters
+                    </Text>
+                  </div>
+                ) : (
+                  Object.keys(groupedRooms)
+                    .sort()
+                    .map((floor) => (
+                      <div key={floor} className="mb-6">
+                        <Title level={4} className="mb-3">
+                          Floor {floor}
+                          <Text
+                            type="secondary"
+                            className="ml-2 text-base font-normal"
+                          >
+                            ({groupedRooms[floor].length} rooms)
+                          </Text>
+                        </Title>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {groupedRooms[floor].map((room) => (
+                            <RoomCard
+                              key={room.roomId}
+                              room={room}
+                              isSelected={selectedRoom?.roomId === room.roomId}
+                              onSelect={handleRoomSelect}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                )
+                // <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                //   {/* {rooms.map((room) => (
+                //     <RoomCard
+                //       key={room.roomId}
+                //       room={room}
+                //       isSelected={selectedRoom?.roomId === room.roomId}
+                //       onSelect={handleRoomSelect}
+                //     />
+                //   ))} */}
+                // </div>
+              }
             </div>
           </div>
 
           {/* Booking Panel */}
           <div className="lg:col-span-1">
             {selectedRoom ? (
-              <BookingForm
+              <EnhancedBookingForm
                 selectedRoom={selectedRoom}
                 bookingDetails={bookingDetails}
-                onBookingChange={updateBookingDetails}
+                onBookingChange={handleBookingChange}
                 onBook={handleBookRoom}
               />
             ) : (
@@ -767,32 +1297,84 @@ const RoomBooking = () => {
                   Select a Room
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  Choose an available room from the list to start booking
+                  Choose an available room to start the booking process
                 </p>
-                <div className="space-y-2 text-sm text-gray-500">
-                  <p>• Click on any available room to view details</p>
-                  <p>• Use filters to narrow down your search</p>
-                  <p>• View room statistics above</p>
+                <div className="space-y-2 text-sm text-gray-500 text-left">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>Apply promo codes for discounts</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Plus className="w-4 h-4 text-blue-500" />
+                    <span>Add extra services and amenities</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-purple-500" />
+                    <span>Multiple payment methods supported</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Receipt className="w-4 h-4 text-orange-500" />
+                    <span>Detailed payment breakdown</span>
+                  </div>
                 </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Booking Confirmation Modal */}
-        <BookingModal
-          open={showBookingModal}
-          selectedRoom={selectedRoom}
-          selectedRate={selectedRate}
-          bookingDetails={bookingDetails}
-          onClose={() => {
-            setShowBookingModal(false);
-            setSelectedRate(null);
-          }}
-          onConfirm={handleConfirmBooking}
-        />
-        {/* {showBookingModal && (
-        )} */}
+        {/* Enhanced Booking Modal */}
+        {showBookingModal && currentBookingData && (
+          <EnhancedBookingModal
+            open={showBookingModal}
+            selectedRoom={selectedRoom}
+            selectedRate={currentBookingData.selectedRate}
+            bookingDetails={bookingDetails}
+            appliedPromo={currentBookingData.appliedPromo}
+            selectedServices={currentBookingData.selectedServices}
+            onClose={() => {
+              setShowBookingModal(false);
+              setCurrentBookingData(null);
+            }}
+            onConfirm={handleConfirmBooking}
+          />
+        )}
+
+        {/* Available Promotions Info */}
+        {/* <div className="mt-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Gift className="w-5 h-5 text-purple-600" />
+            <Text strong className="text-purple-800">
+              Available Promotions
+            </Text>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {mockPromotions
+              .filter((p) => p.isActive)
+              .map((promo) => (
+                <div
+                  key={promo.promoId}
+                  className="bg-white rounded-lg p-3 border border-purple-200"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <Text strong className="text-purple-700">
+                      {promo.promoCode}
+                    </Text>
+                    <Tag color="purple">
+                      {promo.promoType === "percentage"
+                        ? `${promo.discountValue}% OFF`
+                        : `₱${promo.discountValue} OFF`}
+                    </Tag>
+                  </div>
+                  <Text className="text-sm text-gray-600">
+                    {promo.promoName}
+                  </Text>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Min. stay: {promo.minimumStayHours} hours
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div> */}
       </div>
     </div>
   );
