@@ -2,6 +2,7 @@ import { message } from "antd";
 import axios from "axios";
 import {
   useAdminAuthStore,
+  useCurrentActiveUserToken,
   useReceptionistAuthStore,
   useSuperAdminAuthStore,
 } from "../../store/hotelStore";
@@ -62,7 +63,8 @@ export const createAxiosInstanceWithInterceptor = (type = "data", user) => {
 
   instance.interceptors.request.use(async (config) => {
     try {
-      const { token } = getUserToken(user);
+      const { token } = useCurrentActiveUserToken.getState();
+
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       } else {

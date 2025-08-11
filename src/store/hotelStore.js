@@ -1,6 +1,20 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+export const useCurrentActiveUserToken = create(
+  persist(
+    (set) => ({
+      token: null,
+      setToken: (token) => set({ token }),
+      reset: () => set({ token: null }),
+    }),
+    {
+      name: "sogo-hotel-active-user-auth",
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);
+
 export const useSuperAdminAuthStore = create(
   persist(
     (set) => ({

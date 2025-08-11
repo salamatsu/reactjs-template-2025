@@ -5,8 +5,9 @@ import {
 import { Route, Routes } from "react-router";
 import BasicLayout from "../../components/layout/BasicLayout";
 import * as PAGES from "../../pages/Admin";
+import Login from "../../pages/Admin/Login";
 import { useAdminAuthStore } from "../../store/hotelStore";
-import { Auth } from "../ValidateAuth";
+import { Auth, UnAuth } from "../ValidateAuth";
 
 const AdminRoute = () => {
   // ========== Navigation Configuration ==========
@@ -34,9 +35,21 @@ const AdminRoute = () => {
   // ========== Render Routes ==========
   return (
     <Routes>
+
+      <Route
+        element={
+          <UnAuth
+            store={useAdminAuthStore}
+            redirect="/admin/dashboard"
+          />
+        }
+      >
+        <Route path="/" index element={<Login />} />
+      </Route>
+
       {/* Protected Route Wrapper */}
       <Route
-        element={<Auth store={useAdminAuthStore} redirect="/login" />}
+        element={<Auth store={useAdminAuthStore} redirect="/admin" />}
       >
         {/* Main Layout Route */}
         <Route

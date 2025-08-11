@@ -255,10 +255,10 @@ const AdditionalServicesSelector = memo(
         selectedServices.map((service) =>
           service.serviceId === serviceId
             ? {
-                ...service,
-                quantity,
-                totalAmount: service.basePrice * quantity,
-              }
+              ...service,
+              quantity,
+              totalAmount: service.basePrice * quantity,
+            }
             : service
         )
       );
@@ -710,11 +710,10 @@ const EnhancedBookingForm = memo(
                   .map((rate) => (
                     <div
                       key={rate.rateId}
-                      className={`border rounded-lg p-2 cursor-pointer transition-all hover:bg-red-50 ${
-                        selectedRate?.rateId === rate.rateId
+                      className={`border rounded-lg p-2 cursor-pointer transition-all hover:bg-red-50 ${selectedRate?.rateId === rate.rateId
                           ? "border-red-500 ring-2 ring-red-200 bg-red-50"
                           : "border-gray-200"
-                      }`}
+                        }`}
                       onClick={() => setSelectedRate(rate)}
                     >
                       <div className="flex justify-between items-center">
@@ -809,9 +808,8 @@ const RoomCard = memo(({ room, isSelected, onSelect }) => {
 
   return (
     <div
-      className={`bg-white rounded-lg shadow-sm border-2 transition-all cursor-pointer hover:shadow-md hover:scale-105 hover:border-red-400 duration-500 ${
-        isSelected ? "border-red-500 ring-2 ring-red-200" : "border-gray-200"
-      } ${!isAvailable ? "opacity-75" : ""}`}
+      className={`bg-white rounded-lg shadow-sm border-2 transition-all cursor-pointer hover:shadow-md hover:scale-105 hover:border-red-400 duration-500 ${isSelected ? "border-red-500 ring-2 ring-red-200" : "border-gray-200"
+        } ${!isAvailable ? "opacity-75" : ""}`}
       onClick={() => onSelect(room)}
     >
       <div className="p-4">
@@ -870,10 +868,6 @@ const RoomBooking = () => {
   const [currentBookingData, setCurrentBookingData] = useState(null);
 
   const getRoomsByBranch = useGetRoomsByBranch(userData.branchId);
-
-  // const getBookingByRoomId = useGetBookingByRoomId(
-  //   selectedRoomNotAvailable?.roomId
-  // );
 
   const handleRoomSelect = useCallback((room) => {
     if (room.roomStatus === ROOM_STATUSES.AVAILABLE) {
