@@ -32,8 +32,9 @@ import {
   Users,
   XCircle,
 } from "lucide-react";
-import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useGetAllAdditionalServices } from "../../../services/requests/useAdditionalServices";
+import { useAddBookingApi } from "../../../services/requests/useBookings";
 import { useGetPromotionByPromoCode } from "../../../services/requests/usePromotions";
 import {
   useGetRoomsByBranch,
@@ -257,10 +258,10 @@ const AdditionalServicesSelector = memo(
         selectedServices.map((service) =>
           service.serviceId === serviceId
             ? {
-                ...service,
-                quantity,
-                totalAmount: service.basePrice * quantity,
-              }
+              ...service,
+              quantity,
+              totalAmount: service.basePrice * quantity,
+            }
             : service
         )
       );
@@ -454,8 +455,9 @@ const PaymentSummary = memo(
   }
 );
 
-const EnhancedBookingModal = memo(
+const BookingModal = memo(
   ({
+    loading = false,
     open,
     selectedRoom,
     selectedRate,
@@ -508,10 +510,10 @@ const EnhancedBookingModal = memo(
       };
 
       // Simulate payment processing
-      setTimeout(() => {
-        onConfirm(bookingData);
-        setIsProcessing(false);
-      }, 2000);
+      // setTimeout(() => {
+      onConfirm(bookingData);
+      setIsProcessing(false);
+      // }, 2000);
     };
 
     return (
@@ -526,7 +528,7 @@ const EnhancedBookingModal = memo(
               block
               size="large"
               onClick={onClose}
-              disabled={isProcessing}
+              disabled={isProcessing || loading}
             >
               Cancel
             </Button>
@@ -534,11 +536,11 @@ const EnhancedBookingModal = memo(
               block
               size="large"
               type="primary"
-              loading={isProcessing}
+              loading={isProcessing || loading}
               onClick={handleConfirmPayment}
               icon={<CreditCard className="w-4 h-4" />}
             >
-              {isProcessing
+              {isProcessing || loading
                 ? "Processing Payment..."
                 : `Pay ${formatCurrency(totalAmount)}`}
             </Button>
@@ -601,7 +603,7 @@ const EnhancedBookingModal = memo(
   }
 );
 
-const EnhancedBookingForm = memo(
+const BookingForm = memo(
   ({ selectedRoom, bookingDetails, onBookingChange, onBook }) => {
     const [selectedRate, setSelectedRate] = useState(null);
     const [appliedPromo, setAppliedPromo] = useState(null);
@@ -718,11 +720,10 @@ const EnhancedBookingForm = memo(
                   .map((rate) => (
                     <div
                       key={rate.rateId}
-                      className={`border rounded-lg p-2 cursor-pointer transition-all hover:bg-red-50 ${
-                        selectedRate?.rateId === rate.rateId
-                          ? "border-red-500 ring-2 ring-red-200 bg-red-50"
-                          : "border-gray-200"
-                      }`}
+                      className={`border rounded-lg p-2 cursor-pointer transition-all hover:bg-red-50 ${selectedRate?.rateId === rate.rateId
+                        ? "border-red-500 ring-2 ring-red-200 bg-red-50"
+                        : "border-gray-200"
+                        }`}
                       onClick={() => setSelectedRate(rate)}
                     >
                       <div className="flex justify-between items-center">
@@ -817,9 +818,8 @@ const RoomCard = memo(({ room, isSelected, onSelect }) => {
 
   return (
     <div
-      className={`bg-white rounded-lg shadow-sm border-2 transition-all cursor-pointer hover:shadow-md hover:scale-105 hover:border-red-400 duration-500 ${
-        isSelected ? "border-red-500 ring-2 ring-red-200" : "border-gray-200"
-      } ${!isAvailable ? "opacity-75" : ""}`}
+      className={`bg-white rounded-lg shadow-sm border-2 transition-all cursor-pointer hover:shadow-md hover:scale-105 hover:border-red-400 duration-500 ${isSelected ? "border-red-500 ring-2 ring-red-200" : "border-gray-200"
+        } ${!isAvailable ? "opacity-75" : ""}`}
       onClick={() => onSelect(room)}
     >
       <div className="p-4">
@@ -877,6 +877,7 @@ const RoomBooking = () => {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [currentBookingData, setCurrentBookingData] = useState(null);
 
+  const addBookingApi = useAddBookingApi();
   const getRoomsByBranch = useGetRoomsByBranch(userData.branchId);
 
   const handleRoomSelect = useCallback((room) => {
@@ -924,6 +925,7 @@ const RoomBooking = () => {
     (bookingData) => {
       // Generate booking reference
       const bookingReference = `BK${Date.now().toString().slice(-8)}`;
+      console.log(bookingData);
 
       // Prepare booking payload for API
       const bookingPayload = {
@@ -933,10 +935,11 @@ const RoomBooking = () => {
         roomTypeId: selectedRoom.roomTypeId,
         rateId: bookingData.rate.rateId,
         rateTypeId: bookingData.rate.rateTypeId,
+        promoId: bookingData.promo ? bookingData.promo.promoId : null,
         numberOfGuests: bookingDetails.guests,
         checkInDateTime: new Date().toISOString(),
         stayDuration: bookingData.rate.duration,
-        stayDurationType: bookingData.rate.durationType,
+        // stayDurationType: bookingData.rate.durationType || 'hour',
         bookingStatus: "confirmed",
         paymentStatus: "paid",
         baseAmount: bookingData.payment.baseAmount,
@@ -962,35 +965,41 @@ const RoomBooking = () => {
         status: "applied",
       }));
 
-      // Here you would make API calls to:
-      // 1. POST /api/bookings - Create the booking
-      // 2. POST /api/additional-charges - Add any additional services
-      // 3. PUT /api/rooms/{roomId} - Update room status to occupied
+      const body = {
+        ...bookingPayload,
+        additionalCharges,
+      };
 
-      console.log("Booking Payload:", bookingPayload);
-      console.log("Additional Charges:", additionalCharges);
+      addBookingApi.mutate(body, {
+        onSuccess: (response) => {
+          console.log(response);
+          // Simulate API success
+          notification.success({
+            message: "Booking Confirmed!",
+            description: `Booking ${bookingReference} has been created successfully. Room ${selectedRoom.roomNumber} is now occupied.`,
+            duration: 5,
+          });
 
-      // Simulate API success
-      notification.success({
-        message: "Booking Confirmed!",
-        description: `Booking ${bookingReference} has been created successfully. Room ${selectedRoom.roomNumber} is now occupied.`,
-        duration: 5,
+          // Update room status locally (in real app, this would come from API response)
+          setSelectedRoom((prev) => ({
+            ...prev,
+            roomStatus: ROOM_STATUSES.OCCUPIED,
+          }));
+
+          // Reset form
+          setShowBookingModal(false);
+          setSelectedRoom(null);
+          setBookingDetails({
+            dayType: getCurrentDayType(),
+            guests: 2,
+          });
+          setCurrentBookingData(null);
+          getRoomsByBranch.refetch();
+        },
+        onError: (error) => {
+          console.log(error);
+        },
       });
-
-      // Update room status locally (in real app, this would come from API response)
-      setSelectedRoom((prev) => ({
-        ...prev,
-        roomStatus: ROOM_STATUSES.OCCUPIED,
-      }));
-
-      // Reset form
-      setShowBookingModal(false);
-      setSelectedRoom(null);
-      setBookingDetails({
-        dayType: getCurrentDayType(),
-        guests: 2,
-      });
-      setCurrentBookingData(null);
     },
     [selectedRoom, bookingDetails]
   );
@@ -1246,7 +1255,7 @@ const RoomBooking = () => {
           {/* Booking Panel */}
           <div className="lg:col-span-1">
             {selectedRoom ? (
-              <EnhancedBookingForm
+              <BookingForm
                 selectedRoom={selectedRoom}
                 bookingDetails={bookingDetails}
                 onBookingChange={handleBookingChange}
@@ -1286,7 +1295,8 @@ const RoomBooking = () => {
 
         {/* Enhanced Booking Modal */}
         {showBookingModal && currentBookingData && (
-          <EnhancedBookingModal
+          <BookingModal
+            loading={addBookingApi.isPending}
             open={showBookingModal}
             selectedRoom={selectedRoom}
             selectedRate={currentBookingData.selectedRate}
