@@ -1322,36 +1322,36 @@ const RoomBooking = () => {
 
       console.log("booking", body);
 
-      // addBookingApi.mutate(body, {
-      //   onSuccess: (response) => {
-      //     console.log(response);
-      //     // Simulate API success
-      //     notification.success({
-      //       message: "Booking Confirmed!",
-      //       description: `Booking ${bookingReference} has been created successfully. Room ${selectedRoom.roomNumber} is now occupied.`,
-      //       duration: 5,
-      //     });
+      addBookingApi.mutate(body, {
+        onSuccess: (response) => {
+          console.log(response);
+          // Simulate API success
+          notification.success({
+            message: "Booking Confirmed!",
+            description: `Booking ${bookingReference} has been created successfully. Room ${selectedRoom.roomNumber} is now occupied.`,
+            duration: 5,
+          });
 
-      //     // Update room status locally (in real app, this would come from API response)
-      //     setSelectedRoom((prev) => ({
-      //       ...prev,
-      //       roomStatus: ROOM_STATUSES.OCCUPIED,
-      //     }));
+          // Update room status locally (in real app, this would come from API response)
+          setSelectedRoom((prev) => ({
+            ...prev,
+            roomStatus: ROOM_STATUSES.OCCUPIED,
+          }));
 
-      //     // Reset form
-      //     setShowBookingModal(false);
-      //     setSelectedRoom(null);
-      //     setBookingDetails({
-      //       dayType: getCurrentDayType(),
-      //       guests: 2,
-      //     });
-      //     setCurrentBookingData(null);
-      //     getRoomsByBranch.refetch();
-      //   },
-      //   onError: (error) => {
-      //     console.log(error);
-      //   },
-      // });
+          // Reset form
+          setShowBookingModal(false);
+          setSelectedRoom(null);
+          setBookingDetails({
+            dayType: getCurrentDayType(),
+            guests: 2,
+          });
+          setCurrentBookingData(null);
+          getRoomsByBranch.refetch();
+        },
+        onError: (error) => {
+          console.log(error);
+        },
+      });
     },
     [selectedRoom, bookingDetails]
   );
