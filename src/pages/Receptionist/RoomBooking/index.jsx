@@ -263,10 +263,10 @@ const AdditionalServicesSelector = memo(
         selectedServices.map((service) =>
           service.serviceId === serviceId
             ? {
-              ...service,
-              quantity,
-              totalAmount: service.basePrice * quantity,
-            }
+                ...service,
+                quantity,
+                totalAmount: service.basePrice * quantity,
+              }
             : service
         )
       );
@@ -362,15 +362,15 @@ const PaymentSummary = memo(
       let discountAmount = 0;
       if (appliedPromo) {
         if (appliedPromo.promoType === "percentage") {
-          discountAmount = (baseAmount * appliedPromo.discountValue) / 100;
+          discountAmount = (subtotal * appliedPromo.discountValue) / 100;
         } else {
-          discountAmount = Math.min(appliedPromo.discountValue, baseAmount);
+          discountAmount = Math.min(appliedPromo.discountValue, subtotal);
         }
       }
 
-      const totalAmount = subtotal - discountAmount;
-      const taxAmount = totalAmount * taxRate;
-      // const totalAmount = discountedSubtotal + taxAmount;
+      const discountedSubtotal = subtotal - discountAmount;
+      const taxAmount = discountedSubtotal * taxRate;
+      const totalAmount = discountedSubtotal + taxAmount;
 
       return {
         baseAmount,
@@ -392,14 +392,18 @@ const PaymentSummary = memo(
         <div className="space-y-2">
           <div className="flex justify-between">
             <Text>Room Rate</Text>
-            <Text className="font-semibold">{formatCurrency(calculations.baseAmount)}</Text>
+            <Text className="font-semibold">
+              {formatCurrency(calculations.baseAmount)}
+            </Text>
           </div>
 
           {selectedServices.length > 0 && (
             <>
               <div className="flex justify-between">
                 <Text>Additional Services</Text>
-                <Text className="font-semibold">{formatCurrency(calculations.servicesTotal)}</Text>
+                <Text className="font-semibold">
+                  {formatCurrency(calculations.servicesTotal)}
+                </Text>
               </div>
               <div className="ml-4 space-y-1">
                 {selectedServices.map((service) => (
@@ -414,7 +418,7 @@ const PaymentSummary = memo(
                       </Text>
                     </div>
                     <div className="col-span-3 text-left">
-                      <Text >{formatCurrency(service.totalAmount)}</Text>
+                      <Text>{formatCurrency(service.totalAmount)}</Text>
                     </div>
                   </div>
                 ))}
@@ -423,30 +427,33 @@ const PaymentSummary = memo(
           )}
 
           <div className="flex justify-between">
-            <Text>Subtotal</Text>
-            <Text className="font-semibold">{formatCurrency(calculations.subtotal)}</Text>
+            <Text>Subtotal (VATable Sales)</Text>
+            <Text className="font-semibold">
+              {formatCurrency(calculations.subtotal)}
+            </Text>
           </div>
 
           {appliedPromo && calculations.discountAmount > 0 && (
-            <div className="flex justify-between text-green-600">
+            <div className="flex justify-between text-red-600">
               <div className="flex flex-col">
                 <p className="text-xs">
                   Discount ({appliedPromo.promoCode})
                   {appliedPromo.promoType === "percentage" &&
                     ` - ${appliedPromo.discountValue}%`}
                 </p>
-                {appliedPromo.promoType === "percentage" && (
-                  <small className="text-[10px]">Based on room rate</small>
-                )}
               </div>
-              <Text>-{formatCurrency(calculations.discountAmount)}</Text>
+              <span className="font-semibold text-red-600">
+                -{formatCurrency(calculations.discountAmount)}
+              </span>
             </div>
           )}
 
-          {/* <div className="flex justify-between text-sm text-gray-600">
-            <Text>Tax ({(taxRate * 100).toFixed(0)}%)</Text>
-            <Text>{formatCurrency(calculations.taxAmount)}</Text>
-          </div> */}
+          <div className="flex justify-between text-sm text-gray-600">
+            <Text>VAT ({(taxRate * 100).toFixed(0)}%)</Text>
+            <Text className="font-semibold">
+              {formatCurrency(calculations.taxAmount)}
+            </Text>
+          </div>
 
           <Divider className="my-2" />
 
@@ -491,15 +498,15 @@ const BookingModal = memo(
     let discountAmount = 0;
     if (appliedPromo) {
       if (appliedPromo.promoType === "percentage") {
-        discountAmount = (baseAmount * appliedPromo.discountValue) / 100;
+        discountAmount = (subtotal * appliedPromo.discountValue) / 100;
       } else {
-        discountAmount = Math.min(appliedPromo.discountValue, baseAmount);
+        discountAmount = Math.min(appliedPromo.discountValue, subtotal);
       }
     }
 
-    const taxAmount = (baseAmount - discountAmount) * 0.12;
+    const taxAmount = (subtotal - discountAmount) * 0.12;
 
-    const totalAmount = subtotal - discountAmount
+    const totalAmount = subtotal - discountAmount + taxAmount;
 
     const handleConfirmPayment = () => {
       setIsProcessing(true);
@@ -640,30 +647,6 @@ const BookingForm = memo(
       onBook(selectedRate, appliedPromo, selectedServices);
     }, [selectedRate, appliedPromo, selectedServices, onBook]);
 
-    const totalAmount = useMemo(() => {
-      if (!selectedRate) return 0;
-      const servicesTotal = selectedServices.reduce(
-        (sum, service) => sum + service.totalAmount,
-        0
-      );
-      const baseAmount = selectedRate.baseRate * selectedRate.duration;
-      const subtotal = baseAmount + servicesTotal;
-
-      let discountAmount = 0;
-      if (appliedPromo) {
-        if (appliedPromo.promoType === "percentage") {
-          discountAmount = (subtotal * appliedPromo.discountValue) / 100;
-        } else {
-          discountAmount = Math.min(appliedPromo.discountValue, subtotal);
-        }
-      }
-
-      const totalAmount = subtotal - discountAmount;
-      // const totalAmount = discountedSubtotal + taxAmount;
-      return totalAmount;
-
-    }, [selectedRate, selectedServices, appliedPromo]);
-
     const currentDayType =
       dayjs().day() === 0 || dayjs().day() === 6 ? "weekend" : "weekday";
 
@@ -727,10 +710,11 @@ const BookingForm = memo(
                     .map((rate) => (
                       <div
                         key={rate.rateId}
-                        className={`border rounded-lg p-2 cursor-pointer transition-all hover:bg-red-50 ${selectedRate?.rateId === rate.rateId
-                          ? "border-red-500 ring-2 ring-red-200 bg-red-50"
-                          : "border-gray-200"
-                          }`}
+                        className={`border rounded-lg p-2 cursor-pointer transition-all hover:bg-red-50 ${
+                          selectedRate?.rateId === rate.rateId
+                            ? "border-red-500 ring-2 ring-red-200 bg-red-50"
+                            : "border-gray-200"
+                        }`}
                         onClick={() => setSelectedRate(rate)}
                       >
                         <div className="flex justify-between items-center">
@@ -769,7 +753,6 @@ const BookingForm = memo(
                   onRemovePromo={() => setAppliedPromo(null)}
                 />
               </div>
-
             </div>
           </Card>
           <Card size="small" className="col-span-4">
@@ -814,9 +797,7 @@ const BookingForm = memo(
                 onClick={handleBookClick}
                 icon={<Calculator className="w-4 h-4" />}
               >
-                {selectedRate
-                  ? `Book for ${formatCurrency(totalAmount)}`
-                  : "Select a Rate to Continue"}
+                {selectedRate ? `Book Now` : "Select a Rate to Continue"}
               </Button>
             </div>
           </Card>
@@ -831,8 +812,9 @@ const RoomCard = memo(({ room, isSelected, onSelect }) => {
 
   return (
     <div
-      className={` min-w-[250px] bg-white rounded-lg shadow-sm border-2 transition-all cursor-pointer hover:shadow-md hover:scale-105 hover:border-red-400 duration-500 ${isSelected ? "border-red-500 ring-2 ring-red-200" : "border-gray-200"
-        } ${!isAvailable ? "opacity-75" : ""}`}
+      className={` min-w-[250px] bg-white rounded-lg shadow-sm border-2 transition-all cursor-pointer hover:shadow-md hover:scale-105 hover:border-red-400 duration-500 ${
+        isSelected ? "border-red-500 ring-2 ring-red-200" : "border-gray-200"
+      } ${!isAvailable ? "opacity-75" : ""}`}
       onClick={() => onSelect(room)}
     >
       <div className="p-4">
