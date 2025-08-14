@@ -37,9 +37,11 @@ import {
   MapPin,
   Phone,
   Plus,
+  Printer,
   Receipt,
   User,
   Users,
+  X,
   XCircle,
 } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
@@ -258,10 +260,10 @@ const AdditionalServicesSelector = memo(
         selectedServices.map((service) =>
           service.serviceId === serviceId
             ? {
-                ...service,
-                quantity,
-                totalAmount: service.basePrice * quantity,
-              }
+              ...service,
+              quantity,
+              totalAmount: service.basePrice * quantity,
+            }
             : service
         )
       );
@@ -705,11 +707,10 @@ const BookingForm = memo(
                     .map((rate) => (
                       <div
                         key={rate.rateId}
-                        className={`border rounded-lg p-2 cursor-pointer transition-all hover:bg-red-50 ${
-                          selectedRate?.rateId === rate.rateId
-                            ? "border-red-500 ring-2 ring-red-200 bg-red-50"
-                            : "border-gray-200"
-                        }`}
+                        className={`border rounded-lg p-2 cursor-pointer transition-all hover:bg-red-50 ${selectedRate?.rateId === rate.rateId
+                          ? "border-red-500 ring-2 ring-red-200 bg-red-50"
+                          : "border-gray-200"
+                          }`}
                         onClick={() => setSelectedRate(rate)}
                       >
                         <div className="flex justify-between items-center">
@@ -807,9 +808,8 @@ const RoomCard = memo(({ room, isSelected, onSelect }) => {
 
   return (
     <div
-      className={` min-w-[250px] bg-white rounded-lg shadow-sm border-2 transition-all cursor-pointer hover:shadow-md hover:scale-105 hover:border-red-400 duration-500 ${
-        isSelected ? "border-red-500 ring-2 ring-red-200" : "border-gray-200"
-      } ${!isAvailable ? "opacity-75" : ""}`}
+      className={` min-w-[250px] bg-white rounded-lg shadow-sm border-2 transition-all cursor-pointer hover:shadow-md hover:scale-105 hover:border-red-400 duration-500 ${isSelected ? "border-red-500 ring-2 ring-red-200" : "border-gray-200"
+        } ${!isAvailable ? "opacity-75" : ""}`}
       onClick={() => onSelect(room)}
     >
       <div className="p-4">
@@ -992,11 +992,14 @@ const BookingCard = memo(({ booking: bookingData }) => {
         </div>
 
         {/* Payment Information */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-green-600" />
-            Payment Details
-          </h2>
+        <div className="bg-white rounded-xl shadow-lg p-6 space-y-4 ">
+          <div className="flex flex-row items-center justify-between ">
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-green-600" />
+              Payment Details
+            </h2>
+            <StatusBadge status={bookingData?.paymentStatus} />
+          </div>
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -1056,11 +1059,10 @@ const BookingCard = memo(({ booking: bookingData }) => {
               <div className="flex justify-between items-center">
                 <p className="text-sm text-gray-600">Balance</p>
                 <p
-                  className={`font-semibold ${
-                    bookingData.balanceAmount > 0
-                      ? "text-red-600"
-                      : "text-green-600"
-                  }`}
+                  className={`font-semibold ${bookingData.balanceAmount > 0
+                    ? "text-red-600"
+                    : "text-green-600"
+                    }`}
                 >
                   {formatCurrency(bookingData.balanceAmount)}
                 </p>
@@ -1130,11 +1132,14 @@ const BookingCard = memo(({ booking: bookingData }) => {
         </div>
 
         {/* Booking Information */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <FileText className="h-5 w-5 text-orange-600" />
-            Booking Information
-          </h2>
+        <div className="bg-white rounded-xl shadow-lg p-6 space-y-4 ">
+          <div className="flex items-center justify-between ">
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+              <FileText className="h-5 w-5 text-orange-600" />
+              Booking Information
+            </h2>
+            <StatusBadge status={bookingData?.bookingStatus} />
+          </div>
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -1222,39 +1227,29 @@ const CurrentBookedRoom = memo(({ room, onSelect }) => {
         </div>
       }
       extra={
-        <div className="flex flex-col sm:flex-row gap-3 mt-4 md:mt-0">
-          <StatusBadge status={getBookingByRoomIdApi.data?.bookingStatus} />
-          <StatusBadge status={getBookingByRoomIdApi.data?.paymentStatus} />
-        </div>
+        <Button danger key={"cancel"} onClick={() => onSelect(null)}>
+          <X className="w-4 h-4" />
+          CLOSE
+        </Button>
       }
       footer={
-        <div className=" flex justify-between items-center">
-          <div>
-            <Button danger key={"cancel"} onClick={() => onSelect(null)}>
-              CLOSE
-            </Button>
-          </div>
+        <div className=" flex justify-end items-center">
           <Space>
-            <Button type="primary" key={"check-in"}>
+            {/* <Button type="primary" key={"check-in"}>
+              <CheckCheck className="w-4 h-4" />
               Check In
+            </Button> */}
+            {/* <Button key={"edit"}> <Edit className="w-4 h-4" /> Edit Booking</Button> */}
+            <Button key={"print"}>
+              {" "}
+              <Printer className="w-4 h-4" /> Print Receipt
             </Button>
-            <Button key={"edit"}>Edit Booking</Button>
-            <Button key={"print"}>Print Receipt</Button>
             <Button danger key={"cancel"}>
+              <XCircle className="w-4 h-4" />
               Cancel Booking
             </Button>
           </Space>
         </div>
-        // <Space size="large">
-        //   <Button type="primary" >
-        //     Check In
-        //   </Button>
-        //   <Button >Edit Booking</Button>
-        //   <Button >Print Receipt</Button>
-        //   <Button danger >
-        //     Cancel Booking
-        //   </Button>
-        // </Space>
       }
     >
       <div className=" flex flex-col gap-4">
