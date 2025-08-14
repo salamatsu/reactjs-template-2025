@@ -277,10 +277,14 @@ const CurrentBookedRoom = memo(({ room, onSelect }) => {
       footer={
         <div className="flex justify-end items-center">
           <Space>
-            <Button key={"print"} className="rounded-lg">
+            <Button key={"extend"} size="large" type="primary" >
+              <Plus className="w-4 h-4" />
+              Extend Booking
+            </Button>
+            <Button key={"print"} size="large">
               <Printer className="w-4 h-4" /> Print Receipt
             </Button>
-            <Button danger key={"cancel"} className="rounded-lg">
+            <Button danger key={"cancel"} size="large">
               <XCircle className="w-4 h-4" />
               Cancel Booking
             </Button>
@@ -552,18 +556,6 @@ const RoomBooking = () => {
                     Occupied
                   </div>
                 </div>
-                <div className="text-center p-4 rounded-xl bg-blue-50">
-                  <div className="text-3xl font-bold text-blue-600 mb-2">
-                    {
-                      getRoomsByBranch.data.filter(
-                        (r) => r.roomStatus === ROOM_STATUSES.RESERVED
-                      ).length
-                    }
-                  </div>
-                  <div className="text-sm text-blue-700 font-medium">
-                    Reserved
-                  </div>
-                </div>
                 <div className="text-center p-4 rounded-xl bg-yellow-50">
                   <div className="text-3xl font-bold text-yellow-600 mb-2">
                     {
@@ -574,6 +566,18 @@ const RoomBooking = () => {
                   </div>
                   <div className="text-sm text-yellow-700 font-medium">
                     Cleaning
+                  </div>
+                </div>
+                <div className="text-center p-4 rounded-xl bg-orange-50">
+                  <div className="text-3xl font-bold text-orange-600 mb-2">
+                    {
+                      getRoomsByBranch.data.filter(
+                        (r) => r.roomStatus === ROOM_STATUSES.MAINTENANCE
+                      ).length
+                    }
+                  </div>
+                  <div className="text-sm text-orange-700 font-medium">
+                    Maintenance
                   </div>
                 </div>
               </div>

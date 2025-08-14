@@ -1,343 +1,406 @@
-import { useEffect, useState } from 'react';
-import { useReceptionistAuthStore } from '../../../store/hotelStore';
-// import { bookingsAPI, queueAPI, roomsAPI } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import { Card, Row, Col, Statistic, Progress, Badge, Avatar, List, Typography, Divider, Button, Tag } from 'antd';
+import {
+  Bed,
+  Users,
+  Calendar,
+  DollarSign,
+  Clock,
+  UserCheck,
+  UserX,
+  Sparkles,
+  Settings,
+  AlertTriangle,
+  TrendingUp,
+  Home,
+  Phone,
+  User
+} from 'lucide-react';
 
-function Dashboard() {
-  const { userData, reset } = useReceptionistAuthStore();
-  const [stats, setStats] = useState({
-    totalRooms: 0,
-    occupiedRooms: 0,
-    availableRooms: 0,
-    cleaningRooms: 0,
-    todayBookings: 0,
-    walkInQueue: 0
-  });
-  const [rooms, setRooms] = useState([]);
-  const [recentBookings, setRecentBookings] = useState([]);
-  const [walkInQueue, setWalkInQueue] = useState([]);
+const { Title, Text } = Typography;
+
+// Mock data generator
+const generateMockData = () => {
+  return {
+    roomStatus: [
+      { roomStatus: 'available', count: 15 },
+      { roomStatus: 'occupied', count: 22 },
+      { roomStatus: 'cleaning', count: 5 },
+      { roomStatus: 'maintenance', count: 2 },
+      { roomStatus: 'out_of_order', count: 1 }
+    ],
+    todayBookings: [
+      { bookingStatus: 'confirmed', count: 8, totalRevenue: 12500.00 },
+      { bookingStatus: 'checked_in', count: 22, totalRevenue: 45600.00 },
+      { bookingStatus: 'checked_out', count: 15, totalRevenue: 28900.00 },
+      { bookingStatus: 'cancelled', count: 2, totalRevenue: 0 },
+      { bookingStatus: 'no_show', count: 1, totalRevenue: 0 }
+    ],
+    currentOccupancy: [
+      { occupiedRooms: 22, totalRooms: 45 }
+    ],
+    pendingCheckouts: [
+      { count: 8 }
+    ],
+    walkInQueue: [
+      { count: 3 }
+    ]
+  };
+};
+
+const Dashboard = () => {
+  const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Simulate API call
   useEffect(() => {
-    loadDashboardData();
+    const fetchDashboardData = async () => {
+      setLoading(true);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const mockData = generateMockData();
+      setDashboardData(mockData);
+      setLoading(false);
+    };
+
+    fetchDashboardData();
+
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(fetchDashboardData, 30000);
+    return () => clearInterval(interval);
   }, []);
 
-  const loadDashboardData = async () => {
-    try {
-      setLoading(true);
-
-      // Load rooms
-      const roomsResponse = await roomsAPI.getAll();
-      const roomsData = roomsResponse.data;
-      setRooms(roomsData);
-
-      // Calculate room statistics
-      const totalRooms = roomsData.length;
-      const occupiedRooms = roomsData.filter(room => room.roomStatus === 'occupied').length;
-      const availableRooms = roomsData.filter(room => room.roomStatus === 'available').length;
-      const cleaningRooms = roomsData.filter(room => room.roomStatus === 'cleaning').length;
-
-      // Load recent bookings
-      const bookingsResponse = await bookingsAPI.getAll({ limit: 10 });
-      const bookingsData = bookingsResponse.data;
-      setRecentBookings(bookingsData);
-
-      // Load walk-in queue
-      const queueResponse = await queueAPI.getQueue();
-      const queueData = queueResponse.data;
-      setWalkInQueue(queueData);
-
-      setStats({
-        totalRooms,
-        occupiedRooms,
-        availableRooms,
-        cleaningRooms,
-        todayBookings: bookingsData.filter(booking => {
-          const today = new Date().toDateString();
-          const bookingDate = new Date(booking.createdAt).toDateString();
-          return today === bookingDate;
-        }).length,
-        walkInQueue: queueData.length
-      });
-
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getRoomStatusColor = (status) => {
-    switch (status) {
-      case 'available': return 'bg-green-100 text-green-800';
-      case 'occupied': return 'bg-red-100 text-red-800';
-      case 'cleaning': return 'bg-yellow-100 text-yellow-800';
-      case 'maintenance': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getBookingStatusColor = (status) => {
-    switch (status) {
-      case 'confirmed': return 'bg-blue-100 text-blue-800';
-      case 'checked_in': return 'bg-green-100 text-green-800';
-      case 'checked_out': return 'bg-gray-100 text-gray-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  if (loading) {
+  if (loading || !dashboardData) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, i) => (
+              <Card key={i} loading className="shadow-lg" />
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
+  // Process data for display
+  const roomStatusData = dashboardData.roomStatus.reduce((acc, item) => {
+    acc[item.roomStatus] = item.count;
+    return acc;
+  }, {});
+
+  const bookingData = dashboardData.todayBookings.reduce((acc, item) => {
+    acc[item.bookingStatus] = { count: item.count, revenue: item.totalRevenue };
+    return acc;
+  }, {});
+
+  const occupancyData = dashboardData.currentOccupancy[0];
+  const occupancyRate = ((occupancyData.occupiedRooms / occupancyData.totalRooms) * 100).toFixed(1);
+
+  const totalRevenue = dashboardData.todayBookings.reduce((sum, item) => sum + item.totalRevenue, 0);
+  const totalBookings = dashboardData.todayBookings.reduce((sum, item) => sum + item.count, 0);
+  const pendingCheckouts = dashboardData.pendingCheckouts[0].count;
+  const walkInQueue = dashboardData.walkInQueue[0].count;
+
+  // Room status configuration
+  const roomStatusConfig = {
+    available: { color: '#52c41a', icon: Home, label: 'Available' },
+    occupied: { color: '#1890ff', icon: Users, label: 'Occupied' },
+    cleaning: { color: '#faad14', icon: Sparkles, label: 'Cleaning' },
+    maintenance: { color: '#ff7875', icon: Settings, label: 'Maintenance' },
+    out_of_order: { color: '#f5222d', icon: AlertTriangle, label: 'Out of Order' }
+  };
+
+  const getOccupancyColor = (rate) => {
+    if (rate >= 90) return '#f5222d';
+    if (rate >= 75) return '#faad14';
+    return '#52c41a';
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-PH', {
+      style: 'currency',
+      currency: 'PHP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Hotel Sogo Dashboard</h1>
-              <p className="mt-1 text-sm text-gray-500">
-                Welcome back, {userData.firstName || userData.username} ({userData.role})
-              </p>
+              <Title level={2} className="!mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Reception Dashboard
+              </Title>
+              <Text type="secondary" className="text-lg">
+                Welcome back! Here's what's happening today
+              </Text>
             </div>
-            <button
-              onClick={reset}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+            <div className="flex items-center space-x-4">
+              <Badge dot status="processing">
+                <Button type="primary" className="shadow-lg">
+                  Live Updates
+                </Button>
+              </Badge>
+              <Text type="secondary">
+                Last updated: {new Date().toLocaleTimeString()}
+              </Text>
+            </div>
+          </div>
+        </div>
+
+        {/* Key Metrics Row */}
+        <Row gutter={[24, 24]} className="mb-8">
+          <Col xs={24} sm={12} lg={6}>
+            <Card className="shadow-xl border-0 bg-gradient-to-br from-green-400 to-green-600 text-white transform hover:scale-105 transition-transform duration-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-green-700 text-sm font-medium mb-2">Today's Revenue</div>
+                  <div className="text-3xl font-bold">{formatCurrency(totalRevenue)}</div>
+                  <div className="text-green-700 text-xs mt-1 flex items-center">
+                    <TrendingUp size={12} className="mr-1" />
+                    +12.5% from yesterday
+                  </div>
+                </div>
+                <div className="bg-white/20 p-3 rounded-full">
+                  <DollarSign size={32} />
+                </div>
+              </div>
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} lg={6}>
+            <Card className="shadow-xl border-0 bg-gradient-to-br from-blue-400 to-blue-600 text-white transform hover:scale-105 transition-transform duration-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-blue-700 text-sm font-medium mb-2">Room Occupancy</div>
+                  <div className="text-3xl font-bold">{occupancyRate}%</div>
+                  <div className="text-blue-700 text-xs mt-1">
+                    {occupancyData.occupiedRooms} of {occupancyData.totalRooms} rooms
+                  </div>
+                </div>
+                <div className="bg-white/20 p-3 rounded-full">
+                  <Bed size={32} />
+                </div>
+              </div>
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} lg={6}>
+            <Card className="shadow-xl border-0 bg-gradient-to-br from-purple-400 to-purple-600 text-white transform hover:scale-105 transition-transform duration-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-purple-700 text-sm font-medium mb-2">Today's Bookings</div>
+                  <div className="text-3xl font-bold">{totalBookings}</div>
+                  <div className="text-purple-700 text-xs mt-1">
+                    {bookingData.confirmed?.count || 0} pending check-in
+                  </div>
+                </div>
+                <div className="bg-white/20 p-3 rounded-full">
+                  <Calendar size={32} />
+                </div>
+              </div>
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} lg={6}>
+            <Card className="shadow-xl border-0 bg-gradient-to-br from-orange-400 to-orange-600 text-white transform hover:scale-105 transition-transform duration-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-orange-700 text-sm font-medium mb-2">Pending Actions</div>
+                  <div className="text-3xl font-bold">{pendingCheckouts + walkInQueue}</div>
+                  <div className="text-orange-700 text-xs mt-1">
+                    {pendingCheckouts} checkouts, {walkInQueue} in queue
+                  </div>
+                </div>
+                <div className="bg-white/20 p-3 rounded-full">
+                  <Clock size={32} />
+                </div>
+              </div>
+            </Card>
+          </Col>
+        </Row>
+
+        {/* Detailed Information Row */}
+        <Row gutter={[24, 24]}>
+          {/* Room Status Breakdown */}
+          <Col xs={24} lg={12}>
+            <Card
+              title={
+                <div className="flex items-center">
+                  <Home className="mr-2" size={20} />
+                  Room Status Overview
+                </div>
+              }
+              className="shadow-xl border-0 h-full"
+              extra={
+                <Badge count={roomStatusData.maintenance + roomStatusData.out_of_order}
+                  style={{ backgroundColor: '#ff4d4f' }}>
+                  <Button type="text" size="small">View All Rooms</Button>
+                </Badge>
+              }
             >
-              Logout
-            </button>
-          </div>
-        </div>
-      </div>
+              <div className="space-y-4">
+                {Object.entries(roomStatusConfig).map(([status, config]) => {
+                  const count = roomStatusData[status] || 0;
+                  const Icon = config.icon;
+                  const percentage = ((count / occupancyData.totalRooms) * 100).toFixed(1);
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-sm font-bold">{stats.totalRooms}</span>
-                  </div>
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Total Rooms</dt>
-                    <dd className="text-lg font-medium text-gray-900">{stats.totalRooms}</dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-sm font-bold">{stats.availableRooms}</span>
-                  </div>
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Available</dt>
-                    <dd className="text-lg font-medium text-gray-900">{stats.availableRooms}</dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-sm font-bold">{stats.occupiedRooms}</span>
-                  </div>
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Occupied</dt>
-                    <dd className="text-lg font-medium text-gray-900">{stats.occupiedRooms}</dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-sm font-bold">{stats.cleaningRooms}</span>
-                  </div>
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Cleaning</dt>
-                    <dd className="text-lg font-medium text-gray-900">{stats.cleaningRooms}</dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-sm font-bold">{stats.todayBookings}</span>
-                  </div>
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Today's Bookings</dt>
-                    <dd className="text-lg font-medium text-gray-900">{stats.todayBookings}</dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-sm font-bold">{stats.walkInQueue}</span>
-                  </div>
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Queue</dt>
-                    <dd className="text-lg font-medium text-gray-900">{stats.walkInQueue}</dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Rooms Status */}
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
-            <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Room Status</h3>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">Current status of all rooms</p>
-            </div>
-            <ul className="divide-y divide-gray-200">
-              {rooms.slice(0, 8).map((room) => (
-                <li key={room.roomId}>
-                  <div className="px-4 py-4 flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                          <span className="text-sm font-medium text-gray-700">{room.roomNumber}</span>
+                  return (
+                    <div key={status} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                      <div className="flex items-center space-x-3">
+                        <div
+                          className="p-2 rounded-full"
+                          style={{ backgroundColor: `${config.color}20` }}
+                        >
+                          <Icon size={20} style={{ color: config.color }} />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-gray-800">{config.label}</div>
+                          <div className="text-sm text-gray-500">{percentage}% of total rooms</div>
                         </div>
                       </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">Room {room.roomNumber}</div>
-                        <div className="text-sm text-gray-500">{room.roomTypeName} - Floor {room.floor}</div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold" style={{ color: config.color }}>{count}</div>
+                        <div className="text-xs text-gray-400">rooms</div>
                       </div>
                     </div>
-                    <div className="flex items-center">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoomStatusColor(room.roomStatus)}`}>
-                        {room.roomStatus.replace('_', ' ').toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
+                  );
+                })}
+              </div>
 
-          {/* Recent Bookings */}
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
-            <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Bookings</h3>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">Latest booking activities</p>
-            </div>
-            <ul className="divide-y divide-gray-200">
-              {recentBookings.slice(0, 8).map((booking) => (
-                <li key={booking.bookingId}>
-                  <div className="px-4 py-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-gray-900">
-                          {booking.bookingReference}
+              <Divider />
+
+              <div className="text-center">
+                <Progress
+                  type="circle"
+                  percent={parseFloat(occupancyRate)}
+                  strokeColor={getOccupancyColor(occupancyRate)}
+                  format={percent => `${percent}%`}
+                  width={120}
+                />
+                <div className="mt-2 text-sm text-gray-500">Current Occupancy Rate</div>
+              </div>
+            </Card>
+          </Col>
+
+          {/* Booking Status & Queue */}
+          <Col xs={24} lg={12}>
+            <Card
+              title={
+                <div className="flex items-center">
+                  <Users className="mr-2" size={20} />
+                  Today's Activity
+                </div>
+              }
+              className="shadow-xl border-0 h-full"
+            >
+              <div className="space-y-6">
+                {/* Booking Status */}
+                <div>
+                  <Title level={5} className="!mb-4">Booking Status</Title>
+                  <Row gutter={[16, 16]}>
+                    <Col span={12}>
+                      <div className="text-center p-4 bg-blue-50 rounded-lg">
+                        <UserCheck size={24} className="mx-auto mb-2 text-blue-600" />
+                        <div className="text-2xl font-bold text-blue-600">
+                          {bookingData.checked_in?.count || 0}
                         </div>
-                        <div className="text-sm text-gray-500">
-                          Room {booking.roomNumber} - {booking.roomTypeName}
-                        </div>
+                        <div className="text-sm text-gray-600">Checked In</div>
                         <div className="text-xs text-gray-400">
-                          {new Date(booking.createdAt).toLocaleDateString()} at {new Date(booking.createdAt).toLocaleTimeString()}
+                          {formatCurrency(bookingData.checked_in?.revenue || 0)}
                         </div>
                       </div>
-                      <div className="flex flex-col items-end">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBookingStatusColor(booking.bookingStatus)}`}>
-                          {booking.bookingStatus.replace('_', ' ').toUpperCase()}
-                        </span>
-                        <div className="text-sm font-medium text-gray-900 mt-1">
-                          ₱{booking.totalAmount.toLocaleString()}
+                    </Col>
+                    <Col span={12}>
+                      <div className="text-center p-4 bg-green-50 rounded-lg">
+                        <UserX size={24} className="mx-auto mb-2 text-green-600" />
+                        <div className="text-2xl font-bold text-green-600">
+                          {bookingData.checked_out?.count || 0}
+                        </div>
+                        <div className="text-sm text-gray-600">Checked Out</div>
+                        <div className="text-xs text-gray-400">
+                          {formatCurrency(bookingData.checked_out?.revenue || 0)}
                         </div>
                       </div>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
+                    </Col>
+                  </Row>
+                </div>
 
-        {/* Walk-in Queue */}
-        {walkInQueue.length > 0 && (
-          <div className="mt-8 bg-white shadow overflow-hidden sm:rounded-md">
-            <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Walk-in Queue</h3>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">Guests waiting for available rooms</p>
-            </div>
-            <ul className="divide-y divide-gray-200">
-              {walkInQueue.map((guest, index) => (
-                <li key={guest.queueId}>
-                  <div className="px-4 py-4 flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-8 w-8">
-                        <div className="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center">
-                          <span className="text-white text-sm font-bold">{index + 1}</span>
-                        </div>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{guest.guestName}</div>
-                        <div className="text-sm text-gray-500">
-                          {guest.numberOfGuests} guest(s) - {guest.roomTypeName || 'Any room type'}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      Wait: {guest.estimatedWaitTime} min
-                    </div>
+                <Divider />
+
+                {/* Quick Actions */}
+                <div>
+                  <Title level={5} className="!mb-4">Quick Actions</Title>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Button
+                      type="primary"
+                      size="large"
+                      className="h-16 flex flex-col items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 border-0"
+                      danger={pendingCheckouts > 5}
+                    >
+                      <Clock size={20} className="mb-1" />
+                      <span className="text-sm">Checkouts ({pendingCheckouts})</span>
+                    </Button>
+
+                    <Button
+                      type="default"
+                      size="large"
+                      className="h-16 flex flex-col items-center justify-center border-dashed"
+                      danger={walkInQueue > 2}
+                    >
+                      <Phone size={20} className="mb-1" />
+                      <span className="text-sm">Queue ({walkInQueue})</span>
+                    </Button>
                   </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+                </div>
+
+                {/* Recent Activity Preview */}
+                <div>
+                  <Title level={5} className="!mb-4">Recent Activity</Title>
+                  <List
+                    size="small"
+                    dataSource={[
+                      { action: 'Check-in', guest: 'Receptionist', room: '301', time: '10:30 AM', type: 'checkin' },
+                      { action: 'Payment', guest: 'Bell boy', room: '205', time: '10:15 AM', type: 'payment' },
+                      { action: 'Check-out', guest: 'Bell boy', room: '108', time: '09:45 AM', type: 'checkout' },
+                    ]}
+                    renderItem={item => (
+                      <List.Item className="hover:bg-gray-50 px-2 rounded">
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex items-center space-x-3">
+                            <Avatar
+                              size="small"
+                              style={{
+                                backgroundColor: item.type === 'checkin' ? '#52c41a' :
+                                  item.type === 'payment' ? '#1890ff' : '#faad14'
+                              }}
+                            >
+                              <User size={14} />
+                            </Avatar>
+                            <div>
+                              <div className="text-sm font-medium">{item.action} - {item.guest}</div>
+                              <div className="text-xs text-gray-500">Room {item.room}</div>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-400">{item.time}</div>
+                        </div>
+                      </List.Item>
+                    )}
+                  />
+                </div>
+              </div>
+            </Card>
+          </Col>
+        </Row>
       </div>
     </div>
   );
-}
+};
 
 export default Dashboard;

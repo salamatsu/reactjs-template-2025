@@ -1,3 +1,4 @@
+import React from "react";
 import {
   Building,
   Calendar,
@@ -9,8 +10,43 @@ import {
   Phone,
   User,
   Users,
+  ShoppingCart,
+  Receipt,
 } from "lucide-react";
-import StatusBadge from "./StatusBadge";
+
+// StatusBadge component
+const StatusBadge = ({ status }) => {
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'confirmed':
+        return 'bg-blue-100 text-blue-800';
+      case 'checked-in':
+        return 'bg-green-100 text-green-800';
+      case 'checked-out':
+        return 'bg-gray-100 text-gray-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      case 'paid':
+        return 'bg-green-100 text-green-800';
+      case 'partial':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'pending':
+        return 'bg-orange-100 text-orange-800';
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'applied':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  return (
+    <span className={`inline-flex px-2 py-1 text-sm rounded-full font-medium capitalize ${getStatusColor(status)}`}>
+      {status || 'Unknown'}
+    </span>
+  );
+};
 
 const BookingInformation = ({ bookingData }) => {
   const formatDateTime = (dateTime) => {
@@ -24,6 +60,7 @@ const BookingInformation = ({ bookingData }) => {
       minute: "2-digit",
     });
   };
+
   const formatCurrency = (amount, currency = "PHP") => {
     return `${currency} ${amount.toLocaleString("en-US", {
       minimumFractionDigits: 2,
@@ -31,11 +68,22 @@ const BookingInformation = ({ bookingData }) => {
   };
 
   return (
-    <div className=" w-full mx-auto min-h-screen">
+    <div className="w-full mx-auto min-h-screen">
       {/* Header */}
       <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+        {/* Booking Reference */}
+        <div className="mb-4 text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Booking #{bookingData.bookingReference}
+          </h1>
+          <div className="flex justify-center gap-4">
+            <StatusBadge status={bookingData?.bookingStatus} />
+            <StatusBadge status={bookingData?.paymentStatus} />
+          </div>
+        </div>
+
         {/* Quick Info Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 ">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
             <div className="flex items-center gap-3">
               <Building className="h-8 w-8 text-blue-600" />
@@ -144,14 +192,11 @@ const BookingInformation = ({ bookingData }) => {
         </div>
 
         {/* Payment Information */}
-        <div className="bg-white rounded-xl shadow-lg p-6 space-y-4 ">
-          <div className="flex flex-row items-center justify-between ">
-            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-green-600" />
-              Payment Details
-            </h2>
-            <StatusBadge status={bookingData?.paymentStatus} />
-          </div>
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-green-600" />
+            Payment Summary
+          </h2>
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -185,12 +230,12 @@ const BookingInformation = ({ bookingData }) => {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {/* <div>
+              <div>
                 <p className="text-sm text-gray-600">VAT (12%)</p>
                 <p className="font-semibold text-gray-900">
                   {formatCurrency(bookingData.taxAmount)}
                 </p>
-              </div> */}
+              </div>
               <div>
                 <p className="text-sm text-gray-600 font-semibold">Total Paid</p>
                 <p className="font-semibold text-green-700">
@@ -222,6 +267,102 @@ const BookingInformation = ({ bookingData }) => {
             </div>
           </div>
         </div>
+
+        {/* Additional Charges */}
+        {bookingData.additionalCharges && bookingData.additionalCharges.length > 0 && (
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5 text-indigo-600" />
+              Additional Charges
+            </h2>
+
+            <div className="space-y-3">
+              {bookingData.additionalCharges.map((charge) => (
+                <div key={charge.chargeId} className="bg-gray-50 p-4 rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-medium text-gray-900">
+                        {charge.serviceName}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {charge.itemDescription}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Qty: {charge.quantity} × {formatCurrency(charge.unitPrice)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-gray-900">
+                        {formatCurrency(charge.totalAmount)}
+                      </p>
+                      <StatusBadge status={charge.status} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <div className="border-t pt-3 mt-3">
+                <div className="flex justify-between items-center">
+                  <p className="font-semibold text-gray-900">
+                    Total Additional Charges
+                  </p>
+                  <p className="font-semibold text-gray-900">
+                    {formatCurrency(
+                      bookingData.additionalCharges.reduce(
+                        (sum, charge) => sum + charge.totalAmount,
+                        0
+                      )
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Payment History */}
+        {bookingData.payments && bookingData.payments.length > 0 && (
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-green-600" />
+              Payment History
+            </h2>
+
+            <div className="space-y-3">
+              {bookingData.payments.map((payment) => (
+                <div key={payment.paymentId} className="bg-gray-50 p-4 rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-medium text-gray-900 capitalize">
+                        {payment.paymentType.replace('_', ' ')}
+                      </h3>
+                      <p className="text-sm text-gray-600 capitalize">
+                        {payment.paymentMethod} • {payment.paymentCategory}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {formatDateTime(payment.paymentDateTime)}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Processed by: {payment.processedBy}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-green-700">
+                        {formatCurrency(payment.amount)}
+                      </p>
+                      <StatusBadge status={payment.paymentStatus} />
+                    </div>
+                  </div>
+                  {payment.notes && (
+                    <p className="text-sm text-gray-600 mt-2">
+                      Note: {payment.notes}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Guest Information */}
         <div className="bg-white rounded-xl shadow-lg p-6">
@@ -284,14 +425,11 @@ const BookingInformation = ({ bookingData }) => {
         </div>
 
         {/* Booking Information */}
-        <div className="bg-white rounded-xl shadow-lg p-6 space-y-4 ">
-          <div className="flex items-center justify-between ">
-            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <FileText className="h-5 w-5 text-orange-600" />
-              Booking Information
-            </h2>
-            <StatusBadge status={bookingData?.bookingStatus} />
-          </div>
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <FileText className="h-5 w-5 text-orange-600" />
+            Booking Information
+          </h2>
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
