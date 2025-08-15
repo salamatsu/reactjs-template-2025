@@ -8,6 +8,7 @@ import {
   FilterOutlined,
   GiftOutlined,
   HomeOutlined,
+  LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   PlusOutlined,
@@ -16,11 +17,13 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import {
+  Avatar,
   Badge,
   Button,
   Card,
   Col,
   DatePicker,
+  Divider,
   Form,
   Input,
   InputNumber,
@@ -29,6 +32,7 @@ import {
   message,
   Modal,
   Popconfirm,
+  Popover,
   Row,
   Select,
   Space,
@@ -53,6 +57,7 @@ import {
   Users,
 } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
+import { useSuperAdminAuthStore } from "../../store/hotelStore";
 
 const { Header, Sider, Content } = Layout;
 const { Title, Text } = Typography;
@@ -1478,16 +1483,16 @@ const PromotionsManagement = () => {
               {applicableRoomTypes.length === 0
                 ? "All"
                 : applicableRoomTypes.length === 1
-                ? "1 type"
-                : `${applicableRoomTypes.length} types`}
+                  ? "1 type"
+                  : `${applicableRoomTypes.length} types`}
             </div>
             <div>
               <strong>Branches:</strong>{" "}
               {applicableBranches.length === 0
                 ? "All"
                 : applicableBranches.length === 1
-                ? "1 branch"
-                : `${applicableBranches.length} branches`}
+                  ? "1 branch"
+                  : `${applicableBranches.length} branches`}
             </div>
           </div>
         );
@@ -2984,18 +2989,18 @@ const RatesPricingManagement = () => {
                   Room Type:{" "}
                   {form.getFieldValue("roomTypeId")
                     ? roomTypes.find(
-                        (rt) =>
-                          rt.roomTypeId === form.getFieldValue("roomTypeId")
-                      )?.roomTypeName
+                      (rt) =>
+                        rt.roomTypeId === form.getFieldValue("roomTypeId")
+                    )?.roomTypeName
                     : "Not selected"}
                 </div>
                 <div className="text-sm text-gray-600">
                   Rate Type:{" "}
                   {form.getFieldValue("rateTypeId")
                     ? rateTypes.find(
-                        (rt) =>
-                          rt.rateTypeId === form.getFieldValue("rateTypeId")
-                      )?.rateTypeName
+                      (rt) =>
+                        rt.rateTypeId === form.getFieldValue("rateTypeId")
+                    )?.rateTypeName
                     : "Not selected"}
                 </div>
               </div>
@@ -3009,11 +3014,11 @@ const RatesPricingManagement = () => {
                   per{" "}
                   {form.getFieldValue("rateTypeId")
                     ? rateTypes
-                        .find(
-                          (rt) =>
-                            rt.rateTypeId === form.getFieldValue("rateTypeId")
-                        )
-                        ?.durationType?.slice(0, -1)
+                      .find(
+                        (rt) =>
+                          rt.rateTypeId === form.getFieldValue("rateTypeId")
+                      )
+                      ?.durationType?.slice(0, -1)
                     : "period"}
                 </div>
               </div>
@@ -3038,6 +3043,9 @@ const RatesPricingManagement = () => {
 const SuperAdminCMS = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [selectedKey, setSelectedKey] = useState("dashboard");
+  const [userOpen, setUserOpen] = useState(false);
+
+  const { reset, userData } = useSuperAdminAuthStore()
 
   const menuItems = [
     {
@@ -3082,6 +3090,10 @@ const SuperAdminCMS = () => {
     },
   ];
 
+  const handleOpenChange = (newOpen) => {
+    setUserOpen(newOpen);
+  };
+
   const renderContent = () => {
     switch (selectedKey) {
       case "dashboard":
@@ -3123,16 +3135,16 @@ const SuperAdminCMS = () => {
         collapsible
         collapsed={collapsed}
         className="shadow-lg"
-        theme="dark"
+        theme="light"
       >
-        <div className="flex items-center justify-center h-16 bg-blue-800">
+        <div className="flex items-center justify-center h-16 bg-red-800">
           <Shield className="w-8 h-8 text-white" />
           {!collapsed && (
             <span className="ml-2 text-white font-bold">Admin CMS</span>
           )}
         </div>
         <Menu
-          theme="dark"
+          theme="light"
           mode="inline"
           selectedKeys={[selectedKey]}
           items={menuItems}
@@ -3141,7 +3153,7 @@ const SuperAdminCMS = () => {
       </Sider>
 
       <Layout className=" h-screen">
-        <Header className="bg-white shadow-sm px-4 flex items-center justify-between">
+        <Header style={{ backgroundColor: "white" }} className="bg-white shadow-sm px-4 flex items-center justify-between">
           <Button
             type="text"
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
@@ -3150,8 +3162,44 @@ const SuperAdminCMS = () => {
           />
 
           <div className="flex items-center space-x-4">
-            <Text className="text-gray-600">Welcome, Super Admin</Text>
-            <Button icon={<SettingOutlined />} type="text" />
+
+            <Popover
+              content={
+                <Card>
+                  <div className=" text-center ">
+                    <Avatar
+                      size={60}
+                      icon={<UserOutlined />}
+                      className=" bg-primaryColor"
+                    />
+                    <div className=" leading-none">
+                      <Typography.Title level={4}>
+                        {userData &&
+                          [userData.firstName, userData.lastName].join(" ")}
+                      </Typography.Title>
+                    </div>
+                    <div>
+                      <Typography.Text>
+                        {userData && userData.username}
+                      </Typography.Text>
+                    </div>
+                    <Divider />
+                    <Button danger onClick={reset} icon={<LogoutOutlined />}>
+                      SIGN OUT
+                    </Button>
+                  </div>
+                </Card>
+              }
+              trigger="click"
+              onOpenChange={handleOpenChange}
+              open={userOpen}
+              className=" cursor-pointer"
+            >
+              <Text className="text-gray-600 capitalize">Welcome, {[userData.firstName, userData.lastName].join(" ")}</Text>
+            </Popover>
+
+
+            {/* <Button icon={<SettingOutlined />} type="text" /> */}
           </div>
         </Header>
 
