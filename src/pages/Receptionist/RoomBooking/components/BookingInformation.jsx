@@ -14,7 +14,7 @@ import {
   Receipt,
   Plus,
 } from "lucide-react";
-import { Button, Drawer, Empty, Modal, Typography } from "antd";
+import { App, Button, Drawer, Empty, Modal, Typography } from "antd";
 import AdditionalServicesSelector from "./AdditionalServicesSelector";
 
 // StatusBadge component
@@ -58,6 +58,14 @@ const StatusBadge = ({ status }) => {
 const BookingInformation = ({ bookingData }) => {
   const [selectedServices, setSelectedServices] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { modal } = App.useApp();
+
+  const isPending = false;
+
+  const totalSelectedValue = selectedServices.reduce(
+    (sum, service) => sum + service.totalAmount,
+    0
+  );
 
   const formatDateTime = (dateTime) => {
     if (!dateTime) return "Not set";
@@ -75,6 +83,38 @@ const BookingInformation = ({ bookingData }) => {
     return `${currency} ${amount.toLocaleString("en-US", {
       minimumFractionDigits: 2,
     })}`;
+  };
+  const handleConfirmPayment = async () => {
+    modal.confirm({
+      className: "booking-modal",
+      footer: (
+        <div className="flex gap-3">
+          <Button
+            block
+            size="large"
+            // onClick={}
+            // disabled={isPending}
+            className="rounded-lg"
+            htmlType="button"
+          >
+            Cancel
+          </Button>
+          <Button
+            block
+            size="large"
+            type="primary"
+            loading={isPending}
+            onClick={() => {}}
+            icon={<CreditCard className="w-4 h-4" />}
+            className="rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 border-0"
+          >
+            {isPending
+              ? "Processing Payment..."
+              : `Pay ${formatCurrency(totalSelectedValue)}`}
+          </Button>
+        </div>
+      ),
+    });
   };
 
   return (
@@ -539,7 +579,7 @@ const BookingInformation = ({ bookingData }) => {
             size="large"
             block
             type="primary"
-            onClick={() => setIsModalOpen(false)}
+            onClick={handleConfirmPayment}
           >
             PROCEED TO PAYMENT
           </Button>
