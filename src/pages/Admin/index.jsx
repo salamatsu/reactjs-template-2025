@@ -1,4 +1,4 @@
 import Dashboard from "./Dashboard";
-import HotelCRUDDashboard from "./HotelCRUDDashboard";
+import Branch from "./Branch";
 
-export { Dashboard, HotelCRUDDashboard };
+export { Dashboard, Branch };

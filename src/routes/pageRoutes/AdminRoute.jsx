@@ -18,24 +18,25 @@ const AdminRoute = () => {
       isFilter: true,
       isShow: true,
     },
+
     {
       route: "/crud",
-      name: "CRUD",
-      label: "CRUD",
+      name: "Branch",
+      label: "Branch Managment",
       icon: <KeyOutlined className="h-5 w-5" />,
-      component: <PAGES.HotelCRUDDashboard />,
+      component: <PAGES.Branch />,
       isFilter: true,
       isShow: true,
     },
-    {
-      route: "/hanz",
-      name: "Hanz",
-      label: "Hanz",
-      icon: <KeyOutlined className="h-5 w-5" />,
-      component: <PAGES.HotelCRUDDashboard />,
-      isFilter: true,
-      isShow: true,
-    },
+    // {
+    //   route: "/hanz",
+    //   name: "Hanz",
+    //   label: "Hanz",
+    //   icon: <KeyOutlined className="h-5 w-5" />,
+    //   component: <PAGES.HotelCRUDDashboard />,
+    //   isFilter: true,
+    //   isShow: true,
+    // },
   ].map((page) => ({ ...page, route: "/admin" + page.route }));
 
   // ========== Render Routes ==========
