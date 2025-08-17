@@ -27,6 +27,15 @@ const ReceptionistRoute = () => {
       isFilter: true,
       isShow: true,
     },
+    {
+      route: "/bookings-management",
+      name: "Bookings Management",
+      label: "Bookings Management",
+      icon: <KeyOutlined className="h-5 w-5" />,
+      component: <RECEPTIONISTPAGES.BookingsManagement />,
+      isFilter: true,
+      isShow: true,
+    },
   ].map((page) => ({ ...page, route: "/receptionist" + page.route }));
 
   return (
