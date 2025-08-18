@@ -299,7 +299,10 @@ const CurrentBookedRoom = memo(({ room, onSelect }) => {
     >
       <div className="flex flex-col gap-4">
         {getBookingByRoomIdApi.data && (
-          <BookingInformation bookingData={getBookingByRoomIdApi.data} />
+          <BookingInformation
+            bookingData={getBookingByRoomIdApi.data}
+            request={getBookingByRoomIdApi}
+          />
         )}
       </div>
     </Drawer>

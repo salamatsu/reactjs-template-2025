@@ -1,5 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
-import { getAllAdditionalServices } from "../api/additionalServices";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  addAdditionalServices,
+  getAllAdditionalServices,
+} from "../api/additionalServices";
 
 export const useGetAllAdditionalServices = () => {
   return useQuery({
@@ -12,5 +15,12 @@ export const useGetAllAdditionalServices = () => {
     onError: (error) => {
       console.error("Failed to fetch user:", error);
     },
+  });
+};
+
+export const useAddAdditionalServices = () => {
+  return useMutation({
+    mutationFn: addAdditionalServices,
+    retry: false,
   });
 };

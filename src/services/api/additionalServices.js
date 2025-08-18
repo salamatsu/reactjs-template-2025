@@ -31,3 +31,12 @@ export const getAllAdditionalServices = async () => {
     handleApiError(error);
   }
 };
+
+export const addAdditionalServices = async (payload) => {
+  try {
+    const result = await axiosDefault.post("/api/additionalServices", payload);
+    return result.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
