@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo, memo } from "react";
 import {
   Building,
   Calendar,
@@ -73,7 +73,7 @@ const LoadingSpinner = ({ size = "default" }) => (
   </div>
 );
 
-const BookingInformation = ({ bookingData, loading = false, request }) => {
+const BookingInformation = memo(({ bookingData, loading = false, request }) => {
   const { modal } = App.useApp();
 
   const [selectedServices, setSelectedServices] = useState([]);
@@ -156,8 +156,6 @@ const BookingInformation = ({ bookingData, loading = false, request }) => {
               quantity: service.quantity || 1,
             })),
           };
-
-          console.log("Payment payload:", body);
 
           await addAdditionalServices.mutateAsync(body, {
             onSuccess: () => {
@@ -891,6 +889,6 @@ const BookingInformation = ({ bookingData, loading = false, request }) => {
       </Drawer>
     </div>
   );
-};
+});
 
 export default BookingInformation;

@@ -1,327 +1,21 @@
 // HAS TAX 12%
 
-import {
-  App,
-  Button,
-  Drawer,
-  Modal,
-  notification,
-  Select,
-  Space,
-  Typography,
-} from "antd";
-import {
-  Bed,
-  CheckCircle,
-  CreditCard,
-  MapPin,
-  Plus,
-  Printer,
-  Receipt,
-  Star,
-  Users,
-  X,
-  XCircle,
-} from "lucide-react";
-import { memo, useCallback, useMemo, useState } from "react";
-import BookingConfirmation from "./components/BookingConfirmation";
-import BookingInformation from "./components/BookingInformation";
-import StatusTag from "../../../components/features/StatusTag";
+import { App, Drawer, notification, Select, Typography } from "antd";
+import { Bed, CheckCircle, CreditCard, Plus, Receipt, X } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { useFilters } from "../../../hooks/useFilters";
 import { ROOM_STATUSES, STATUS_CONFIGS } from "../../../lib/constants";
-import {
-  useAddBookingApi,
-  useGetBookingByRoomIdApi,
-} from "../../../services/requests/useBookings";
+import { useAddBookingApi } from "../../../services/requests/useBookings";
 import { useGetRoomsByBranch } from "../../../services/requests/useRooms";
 import { useReceptionistAuthStore } from "../../../store/hotelStore";
-import { formatCurrency } from "../../../utils/formatCurrency";
 import { getCurrentDayType } from "../../../utils/formatDate";
 import BookingForm from "./components/BookingForm";
+import BookingModal from "./components/BookingModal";
+import CurrentBookedRoom from "./components/CurrentBooking";
+import RoomCard from "./components/RoomCard";
+import BookingNotes from "../../../components/ui/cards/BookingNotes";
 
 const { Text } = Typography;
-
-const BookingModal = memo(
-  ({
-    loading = false,
-    open,
-    selectedRoom,
-    selectedRate,
-    bookingDetails,
-    appliedPromo,
-    selectedServices,
-    onClose,
-    onConfirm,
-  }) => {
-    const [paymentMethod, setPaymentMethod] = useState("cash");
-    const [isProcessing, setIsProcessing] = useState(false);
-
-    if (!selectedRoom || !selectedRate) return null;
-
-    const baseAmount = selectedRate.baseRate * selectedRate.duration;
-    const servicesTotal = selectedServices.reduce(
-      (sum, service) => sum + service.totalAmount,
-      0
-    );
-    const subtotal = baseAmount + servicesTotal;
-
-    let discountAmount = 0;
-    if (appliedPromo) {
-      if (appliedPromo.promoType === "percentage") {
-        discountAmount = (subtotal * appliedPromo.discountValue) / 100;
-      } else {
-        discountAmount = Math.min(appliedPromo.discountValue, subtotal);
-      }
-    }
-
-    const taxAmount = (subtotal - discountAmount) * 0.12;
-    const totalAmount = subtotal - discountAmount;
-
-    const handleConfirmPayment = () => {
-      setIsProcessing(true);
-
-      const bookingData = {
-        room: selectedRoom,
-        rate: selectedRate,
-        details: bookingDetails,
-        promo: appliedPromo,
-        services: selectedServices,
-        payment: {
-          method: paymentMethod,
-          baseAmount,
-          discountAmount,
-          taxAmount,
-          totalAmount,
-        },
-      };
-
-      setTimeout(() => {
-        onConfirm(bookingData);
-        setIsProcessing(false);
-      }, 1000);
-    };
-
-    return (
-      <Modal
-        open={open}
-        centered
-        width={600}
-        closeIcon={false}
-        className="booking-modal"
-        footer={
-          <div className="flex gap-3">
-            <Button
-              block
-              size="large"
-              onClick={onClose}
-              disabled={isProcessing || loading}
-              className="rounded-lg"
-            >
-              Cancel
-            </Button>
-            <Button
-              block
-              size="large"
-              type="primary"
-              loading={isProcessing || loading}
-              onClick={handleConfirmPayment}
-              icon={<CreditCard className="w-4 h-4" />}
-              className="rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 border-0"
-            >
-              {isProcessing || loading
-                ? "Processing Payment..."
-                : `Pay ${formatCurrency(totalAmount)}`}
-            </Button>
-          </div>
-        }
-      >
-        <BookingConfirmation
-          selectedRoom={selectedRoom}
-          selectedRate={selectedRate}
-          bookingDetails={bookingDetails}
-          appliedPromo={appliedPromo}
-          selectedServices={selectedServices}
-          paymentMethod={paymentMethod}
-          setPaymentMethod={setPaymentMethod}
-        />
-      </Modal>
-    );
-  }
-);
-
-const RoomCard = memo(({ room, isSelected, onSelect }) => {
-  const isAvailable = room.roomStatus === ROOM_STATUSES.AVAILABLE;
-
-  return (
-    <div
-      className={`min-w-[280px] bg-white rounded-2xl shadow-lg border-2 transition-all duration-300 cursor-pointer hover:shadow-xl hover:scale-105 transform ${
-        isSelected
-          ? "border-red-400 ring-4 ring-red-100 shadow-xl scale-105"
-          : "border-gray-100 hover:border-red-300"
-      } ${!isAvailable ? "opacity-75" : ""}`}
-      onClick={() => onSelect(room)}
-    >
-      <div className="relative overflow-hidden rounded-t-2xl">
-        <div
-          className="h-32 bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center"
-          style={{
-            backgroundImage: `url(${room.imageUrl})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-        >
-          {/* <Bed className="w-12 h-12 text-blue-400" /> */}
-        </div>
-        <div className="absolute top-3 right-3">
-          <StatusTag status={room.roomStatus} />
-        </div>
-      </div>
-
-      <div className="p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold text-gray-900">
-            Room {room.roomNumber}
-          </h3>
-          <div className="flex items-center gap-1 text-yellow-500">
-            <Star className="w-4 h-4 fill-current" />
-            <Star className="w-4 h-4 fill-current" />
-            <Star className="w-4 h-4 fill-current" />
-            <Star className="w-4 h-4 fill-current" />
-            <Star className="w-4 h-4 fill-current" />
-            {/* <Star className="w-4 h-4" /> */}
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <div className="bg-gray-50 rounded-lg p-3">
-            <p className="font-semibold text-gray-900 text-lg">
-              {room.roomTypeName}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 text-gray-600">
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <Bed className="w-4 h-4 text-blue-600" />
-            </div>
-            <span className="text-sm font-medium">{room.bedConfiguration}</span>
-          </div>
-
-          <div className="flex items-center gap-3 text-gray-600">
-            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-              <Users className="w-4 h-4 text-green-600" />
-            </div>
-            <span className="text-sm font-medium">
-              Max {room.maxOccupancy} guests
-            </span>
-          </div>
-
-          <div className="flex items-center gap-3 text-gray-600">
-            <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-              <MapPin className="w-4 h-4 text-purple-600" />
-            </div>
-            <span className="text-sm font-medium">{room.roomSize} sqm</span>
-          </div>
-        </div>
-
-        {isSelected && (
-          <div className="mt-4 p-3 bg-gradient-to-r from-red-50 to-pink-50 rounded-lg border border-red-200">
-            <div className="flex items-center gap-2 text-red-700">
-              <CheckCircle className="w-4 h-4" />
-              <span className="text-sm font-semibold">
-                Selected for booking
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-});
-
-const CurrentBookedRoom = memo(({ room, onSelect }) => {
-  const getBookingByRoomIdApi = useGetBookingByRoomIdApi(room?.roomId);
-
-  return (
-    <Drawer
-      placement="right"
-      open={!!room}
-      onClose={() => onSelect(null)}
-      width={"100%"}
-      closeIcon={null}
-      className="booking-drawer"
-      title={
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Booking Details
-          </h1>
-          <p className="text-lg text-gray-600 font-mono">
-            Ref. #:{" "}
-            <Typography.Text
-              copyable
-              style={{ fontSize: "1.25rem", fontWeight: "bold" }}
-            >
-              {getBookingByRoomIdApi.data?.bookingReference}
-            </Typography.Text>
-          </p>
-        </div>
-      }
-      extra={
-        <Button
-          danger
-          key={"cancel"}
-          onClick={() => onSelect(null)}
-          className="rounded-lg"
-          size="large"
-        >
-          <X className="w-4 h-4" />
-          CLOSE
-        </Button>
-      }
-      footer={
-        <div className="flex justify-end items-center">
-          <Space>
-            <Button key={"extend"} size="large" type="primary">
-              <Plus className="w-4 h-4" />
-              Extend Booking
-            </Button>
-            <Button key={"print"} size="large">
-              <Printer className="w-4 h-4" /> Print Receipt
-            </Button>
-            <Button danger key={"cancel"} size="large">
-              <XCircle className="w-4 h-4" />
-              Cancel Booking
-            </Button>
-          </Space>
-        </div>
-      }
-      classNames={{
-        body: "bg-gray-50",
-      }}
-    >
-      <div className="flex flex-col gap-4">
-        {getBookingByRoomIdApi.data && (
-          <BookingInformation
-            bookingData={getBookingByRoomIdApi.data}
-            request={getBookingByRoomIdApi}
-          />
-        )}
-      </div>
-    </Drawer>
-  );
-});
-
-const useFilters = () => {
-  const [filters, setFilters] = useState({
-    floor: "all",
-    roomType: "all",
-    status: "all",
-  });
-
-  const updateFilter = useCallback((filterType, value) => {
-    setFilters((prev) => ({ ...prev, [filterType]: value }));
-  }, []);
-
-  return [filters, updateFilter];
-};
 
 const RoomBooking = () => {
   const [filters, updateFilter] = useFilters();
@@ -506,6 +200,53 @@ const RoomBooking = () => {
     [getRoomsByBranch.data]
   );
 
+  const statusCards = useMemo(
+    () => [
+      {
+        label: "Rooms",
+        count: getRoomsByBranch.data.length,
+        bgColor: "bg-gray-50",
+        labelColor: "text-gray-900",
+        textColor: "text-gray-600",
+      },
+      {
+        label: "Available",
+        count: availableRooms.length,
+        bgColor: "bg-green-50",
+        labelColor: "text-green-600",
+        textColor: "text-green-600",
+      },
+      {
+        label: "Occupied",
+        count: getRoomsByBranch.data.filter(
+          (room) => room.roomStatus === ROOM_STATUSES.OCCUPIED
+        ).length,
+        bgColor: "bg-red-50",
+        labelColor: "text-red-600",
+        textColor: "text-red-600",
+      },
+      {
+        label: "Cleaning",
+        count: getRoomsByBranch.data.filter(
+          (room) => room.roomStatus === ROOM_STATUSES.CLEANING
+        ).length,
+        bgColor: "bg-yellow-50",
+        labelColor: "text-yellow-600",
+        textColor: "text-yellow-600",
+      },
+      {
+        label: "Maintenance",
+        count: getRoomsByBranch.data.filter(
+          (room) => room.roomStatus === ROOM_STATUSES.MAINTENANCE
+        ).length,
+        bgColor: "bg-blue-50",
+        labelColor: "text-blue-600",
+        textColor: "text-blue-600",
+      },
+    ],
+    [availableRooms]
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 p-6">
       <div className="w-11/12 mx-auto space-y-8">
@@ -529,103 +270,26 @@ const RoomBooking = () => {
                 Room Overview
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-                <div className="text-center p-4 rounded-xl bg-gray-50">
-                  <div className="text-3xl font-bold text-gray-900 mb-2">
-                    {getRoomsByBranch.data.length}
-                  </div>
-                  <div className="text-sm text-gray-600 font-medium">
-                    Total Rooms
-                  </div>
-                </div>
-                <div className="text-center p-4 rounded-xl bg-green-50">
-                  <div className="text-3xl font-bold text-green-600 mb-2">
-                    {
-                      getRoomsByBranch.data.filter(
-                        (r) => r.roomStatus === ROOM_STATUSES.AVAILABLE
-                      ).length
-                    }
-                  </div>
-                  <div className="text-sm text-green-700 font-medium">
-                    Available
-                  </div>
-                </div>
-                <div className="text-center p-4 rounded-xl bg-red-50">
-                  <div className="text-3xl font-bold text-red-600 mb-2">
-                    {
-                      getRoomsByBranch.data.filter(
-                        (r) => r.roomStatus === ROOM_STATUSES.OCCUPIED
-                      ).length
-                    }
-                  </div>
-                  <div className="text-sm text-red-700 font-medium">
-                    Occupied
-                  </div>
-                </div>
-                <div className="text-center p-4 rounded-xl bg-yellow-50">
-                  <div className="text-3xl font-bold text-yellow-600 mb-2">
-                    {
-                      getRoomsByBranch.data.filter(
-                        (r) => r.roomStatus === ROOM_STATUSES.CLEANING
-                      ).length
-                    }
-                  </div>
-                  <div className="text-sm text-yellow-700 font-medium">
-                    Cleaning
-                  </div>
-                </div>
-                <div className="text-center p-4 rounded-xl bg-orange-50">
-                  <div className="text-3xl font-bold text-orange-600 mb-2">
-                    {
-                      getRoomsByBranch.data.filter(
-                        (r) => r.roomStatus === ROOM_STATUSES.MAINTENANCE
-                      ).length
-                    }
-                  </div>
-                  <div className="text-sm text-orange-700 font-medium">
-                    Maintenance
-                  </div>
-                </div>
+                {statusCards.map(
+                  ({ key, count, label, bgColor, textColor, labelColor }) => (
+                    <div
+                      key={key}
+                      className={`text-center p-4 rounded-xl ${bgColor}`}
+                    >
+                      <div className={`text-3xl font-bold ${textColor} mb-2`}>
+                        {count}
+                      </div>
+                      <div className={`text-sm ${labelColor} font-medium`}>
+                        {label}
+                      </div>
+                    </div>
+                  )
+                )}
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-xl border-0 p-4 min-w-[350px]">
-            <div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
-                Getting Started
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Choose an available room to start the booking process
-              </p>
-            </div>
-
-            <div className="space-y-4 text-sm">
-              <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-                <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                <span className="text-green-700 font-medium">
-                  Apply promo codes for discounts
-                </span>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-                <Plus className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                <span className="text-blue-700 font-medium">
-                  Add extra services and amenities
-                </span>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg">
-                <CreditCard className="w-5 h-5 text-purple-500 flex-shrink-0" />
-                <span className="text-purple-700 font-medium">
-                  Multiple payment methods supported
-                </span>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg">
-                <Receipt className="w-5 h-5 text-orange-500 flex-shrink-0" />
-                <span className="text-orange-700 font-medium">
-                  Detailed payment breakdown
-                </span>
-              </div>
-            </div>
-          </div>
+          <BookingNotes />
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl border-0 p-8">
