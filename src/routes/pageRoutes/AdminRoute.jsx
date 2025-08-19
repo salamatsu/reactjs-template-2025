@@ -33,7 +33,7 @@ const AdminRoute = () => {
       name: "RoomType",
       label: "Room Type",
       icon: <HomeOutlined className="h-5 w-5" />,
-      component: <PAGES.RoomManagement />,
+      component: <PAGES.RoomTypes />,
       isFilter: true,
       isShow: true,
     },

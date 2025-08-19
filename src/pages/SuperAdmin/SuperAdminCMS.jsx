@@ -753,7 +753,6 @@ const RoomTypeManagement = () => {
   const [form] = Form.useForm();
 
   const filteredRoomTypes = useTableData(roomTypes, searchTerm, filters);
-
   const columns = [
     {
       title: "Code",
@@ -1483,16 +1482,16 @@ const PromotionsManagement = () => {
               {applicableRoomTypes.length === 0
                 ? "All"
                 : applicableRoomTypes.length === 1
-                ? "1 type"
-                : `${applicableRoomTypes.length} types`}
+                  ? "1 type"
+                  : `${applicableRoomTypes.length} types`}
             </div>
             <div>
               <strong>Branches:</strong>{" "}
               {applicableBranches.length === 0
                 ? "All"
                 : applicableBranches.length === 1
-                ? "1 branch"
-                : `${applicableBranches.length} branches`}
+                  ? "1 branch"
+                  : `${applicableBranches.length} branches`}
             </div>
           </div>
         );
@@ -2989,18 +2988,18 @@ const RatesPricingManagement = () => {
                   Room Type:{" "}
                   {form.getFieldValue("roomTypeId")
                     ? roomTypes.find(
-                        (rt) =>
-                          rt.roomTypeId === form.getFieldValue("roomTypeId")
-                      )?.roomTypeName
+                      (rt) =>
+                        rt.roomTypeId === form.getFieldValue("roomTypeId")
+                    )?.roomTypeName
                     : "Not selected"}
                 </div>
                 <div className="text-sm text-gray-600">
                   Rate Type:{" "}
                   {form.getFieldValue("rateTypeId")
                     ? rateTypes.find(
-                        (rt) =>
-                          rt.rateTypeId === form.getFieldValue("rateTypeId")
-                      )?.rateTypeName
+                      (rt) =>
+                        rt.rateTypeId === form.getFieldValue("rateTypeId")
+                    )?.rateTypeName
                     : "Not selected"}
                 </div>
               </div>
@@ -3014,11 +3013,11 @@ const RatesPricingManagement = () => {
                   per{" "}
                   {form.getFieldValue("rateTypeId")
                     ? rateTypes
-                        .find(
-                          (rt) =>
-                            rt.rateTypeId === form.getFieldValue("rateTypeId")
-                        )
-                        ?.durationType?.slice(0, -1)
+                      .find(
+                        (rt) =>
+                          rt.rateTypeId === form.getFieldValue("rateTypeId")
+                      )
+                      ?.durationType?.slice(0, -1)
                     : "period"}
                 </div>
               </div>
