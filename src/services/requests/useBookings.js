@@ -1,6 +1,11 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { addBookingApi, getBookingByBookingIdApi, getBookingByRoomIdApi, getBookingStatusApi } from "../api/bookingsApi";
-
+import {
+  addBookingApi,
+  extendBookingApi,
+  getBookingByBookingIdApi,
+  getBookingByRoomIdApi,
+  getBookingStatusApi,
+} from "../api/bookingsApi";
 
 export const useAddBookingApi = () => {
   return useMutation({
@@ -8,7 +13,12 @@ export const useAddBookingApi = () => {
     retry: false,
   });
 };
-
+export const useExtendBookingApi = () => {
+  return useMutation({
+    mutationFn: extendBookingApi,
+    retry: false,
+  });
+};
 
 export const useGetBookingByRoomIdApi = (roomId) => {
   return useQuery({
@@ -50,7 +60,6 @@ export const useGetBookingStatusApi = (bookingId) => {
   });
 };
 
-
 export const useGetBookingPaymentsApi = (bookingId) => {
   return useQuery({
     queryKey: ["getBookingPaymentsApi"],
@@ -74,4 +83,3 @@ export const useGetBookingChargesApi = (bookingId) => {
     },
   });
 };
-
