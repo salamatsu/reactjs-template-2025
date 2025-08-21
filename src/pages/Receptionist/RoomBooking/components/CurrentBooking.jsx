@@ -1,11 +1,13 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { useGetBookingByRoomIdApi } from "../../../../services/requests/useBookings";
 import { Button, Drawer, Space, Typography } from "antd";
 import { Plus, Printer, X, XCircle } from "lucide-react";
 import BookingInformation from "./BookingInformation";
+import ExtendBooking from "./ExtendBooking";
 
 const CurrentBookedRoom = memo(({ room, onSelect }) => {
   const getBookingByRoomIdApi = useGetBookingByRoomIdApi(room?.roomId);
+  const [isShowExtend, setIsShowExtend] = useState(false);
 
   return (
     <Drawer
@@ -46,7 +48,12 @@ const CurrentBookedRoom = memo(({ room, onSelect }) => {
       footer={
         <div className="flex justify-end items-center">
           <Space>
-            <Button key={"extend"} size="large" type="primary">
+            <Button
+              key={"extend"}
+              size="large"
+              type="primary"
+              onClick={() => setIsShowExtend(true)}
+            >
               <Plus className="w-4 h-4" />
               Extend Booking Information
             </Button>
@@ -72,6 +79,39 @@ const CurrentBookedRoom = memo(({ room, onSelect }) => {
           />
         )}
       </div>
+
+      <Drawer
+        placement="right"
+        open={isShowExtend}
+        onClose={() => setIsShowExtend(false)}
+        size="large"
+        closeIcon={null}
+        className="booking-drawer"
+        title={
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Extend booking
+          </h1>
+        }
+        extra={
+          <Button
+            danger
+            key={"cancel"}
+            onClick={() => setIsShowExtend(false)}
+            className="rounded-lg"
+            size="large"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        }
+        classNames={{
+          body: "bg-gray-50",
+        }}
+      >
+        <ExtendBooking
+          bookingData={getBookingByRoomIdApi.data}
+          request={getBookingByRoomIdApi}
+        />
+      </Drawer>
     </Drawer>
   );
 });

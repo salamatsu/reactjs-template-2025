@@ -32,9 +32,23 @@ export const addBookingApi = async (payload) => {
   }
 };
 
+export const extendBookingApi = async ({ bookingId, ...payload }) => {
+  try {
+    const result = await axiosDefault.post(
+      `/api/bookings/${bookingId}/extensions`,
+      payload
+    );
+    return result.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
 export const getBookingByRoomIdApi = async (roomId) => {
   try {
-    const result = await axiosDefault.get(`/api/bookings/${roomId}/bookingByRoomId`);
+    const result = await axiosDefault.get(
+      `/api/bookings/${roomId}/bookingByRoomId`
+    );
     return result.data;
   } catch (error) {
     handleApiError(error);
@@ -62,7 +76,9 @@ export const getBookingStatusApi = async (bookingId) => {
 // PAYMENT OPERATIONS
 export const getBookingPaymentsApi = async (bookingId) => {
   try {
-    const result = await axiosDefault.get(`/api/bookings/${bookingId}/payments`);
+    const result = await axiosDefault.get(
+      `/api/bookings/${bookingId}/payments`
+    );
     return result.data;
   } catch (error) {
     handleApiError(error);
@@ -77,5 +93,3 @@ export const getBookingChargesApi = async (bookingId) => {
     handleApiError(error);
   }
 };
-
-
