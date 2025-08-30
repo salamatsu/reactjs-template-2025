@@ -37,15 +37,13 @@ const CurrentBookedRoom = memo(({ room, onSelect }) => {
       }
       extra={
         <Button
-          danger
+          type="text"
           key={"cancel"}
           onClick={() => onSelect(null)}
           className="rounded-lg"
           size="large"
-        >
-          <X className="w-4 h-4" />
-          CLOSE
-        </Button>
+          icon={<X />}
+        />
       }
       footer={
         <div className="flex justify-end items-center">

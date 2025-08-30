@@ -21,16 +21,18 @@ import {
   MapPin,
   Phone,
   Plus,
-  Receipt,
+  Printer,
   ShoppingCart,
   User,
   Users,
+  X,
 } from "lucide-react";
 import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { PAYMENT_METHODS } from "../../../../lib/constants";
 import { useAddAdditionalServices } from "../../../../services/requests/useAdditionalServices";
 import AdditionalServicesSelector from "./AdditionalServicesSelector";
 import PaymentHistory from "./PaymentHistory";
+import PaymentSummary from "../../../../components/features/PaymentSummary";
 
 const { Text } = Typography;
 
@@ -326,6 +328,29 @@ const BookingInformation = memo(
       setMarkAsPaid(false);
     }, [bookingData?.bookingId]);
 
+    const handleViewPaymentSummary = () => {
+      modal.confirm({
+        icon: null,
+        content: (
+          <PaymentSummary
+            baseAmount={bookingData?.baseAmount}
+            appliedPromo={bookingData?.promotion}
+            selectedServices={bookingData?.additionalCharges}
+          />
+        ),
+        okText: (
+          <div className=" flex justify-center items-center gap-1">
+            <Printer className="w-4 h-4" /> Print
+          </div>
+        ),
+        cancelText: (
+          <div className=" flex justify-center items-center gap-1">
+            <X className="w-4 h-4" /> Cancel
+          </div>
+        ),
+      });
+    };
+
     // Loading state
     if (loading) {
       return (
@@ -349,7 +374,7 @@ const BookingInformation = memo(
         {/* Header */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
           <div className="mb-4 text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            {/* <h1 className="text-2xl font-bold text-gray-900 mb-2">
               Booking Reference:{" "}
               <Typography.Text
                 style={{ fontSize: "1.5rem", fontWeight: "bold" }}
@@ -357,7 +382,7 @@ const BookingInformation = memo(
               >
                 {bookingData.bookingReference}
               </Typography.Text>
-            </h1>
+            </h1> */}
             <div className="flex justify-center gap-4 flex-wrap">
               <StatusBadge status={bookingData?.bookingStatus} />
               <StatusBadge status={bookingData?.paymentStatus} />
@@ -503,6 +528,11 @@ const BookingInformation = memo(
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-red-600">Discount</p>
+                  {bookingData?.promotion?.promoName && (
+                    <small className=" max-w-[10px]">
+                      ({bookingData?.promotion?.promoName})
+                    </small>
+                  )}
                   <p className="font-semibold text-red-700">
                     -{formatCurrency(bookingData.discountAmount)}
                   </p>
@@ -554,7 +584,7 @@ const BookingInformation = memo(
               </div>
             </div>
             <div className=" flex gap-6">
-              <Button size="large" block>
+              <Button size="large" block onClick={handleViewPaymentSummary}>
                 Summary
               </Button>
               <Button
@@ -565,7 +595,7 @@ const BookingInformation = memo(
               >
                 {balanceAmount <= 0
                   ? "See Payment"
-                  : `Settle Payment (${formatCurrency(balanceAmount)})`}
+                  : `Settle (${formatCurrency(balanceAmount)})`}
               </Button>
             </div>
           </div>
@@ -578,36 +608,38 @@ const BookingInformation = memo(
             </h2>
 
             {bookingData.additionalCharges?.length > 0 ? (
-              <div className="space-y-3">
-                {bookingData.additionalCharges.map((charge) => (
-                  <div
-                    key={charge.chargeId}
-                    className="bg-gray-50 p-4 rounded-lg"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="font-medium text-gray-900">
-                          {charge.serviceName}
-                        </h3>
-                        {charge.itemDescription && (
-                          <p className="text-sm text-gray-600">
-                            {charge.itemDescription}
+              <div className="space-y-3 ">
+                <div className="space-y-3 max-h-[300px] overflow-y-auto ">
+                  {bookingData.additionalCharges.map((charge) => (
+                    <div
+                      key={charge.chargeId}
+                      className="bg-gray-50 p-4 rounded-lg"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h3 className="font-medium text-gray-900">
+                            {charge.serviceName}
+                          </h3>
+                          {charge.itemDescription && (
+                            <p className="text-sm text-gray-600">
+                              {charge.itemDescription}
+                            </p>
+                          )}
+                          <p className="text-sm text-gray-500">
+                            Qty: {charge.quantity} ×{" "}
+                            {formatCurrency(charge.unitPrice)}
                           </p>
-                        )}
-                        <p className="text-sm text-gray-500">
-                          Qty: {charge.quantity} ×{" "}
-                          {formatCurrency(charge.unitPrice)}
-                        </p>
-                      </div>
-                      <div className="text-right ml-4">
-                        <small>{charge.serviceType}</small>
-                        <p className="font-semibold text-gray-900">
-                          {formatCurrency(charge.totalAmount)}
-                        </p>
+                        </div>
+                        <div className="text-right ml-4">
+                          <small>{charge.serviceType}</small>
+                          <p className="font-semibold text-gray-900">
+                            {formatCurrency(charge.totalAmount)}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
 
                 <div className="border-t pt-3 mt-3">
                   <div className="flex justify-between items-center">
