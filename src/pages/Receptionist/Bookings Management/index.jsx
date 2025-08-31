@@ -1,912 +1,714 @@
 import {
-  ExportOutlined,
+  CalendarOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  DollarOutlined,
+  ExclamationCircleOutlined,
   HomeOutlined,
-  PlusOutlined,
-  ReloadOutlined,
+  InfoCircleOutlined,
+  MailOutlined,
+  PhoneOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
-import dayjs from "dayjs";
-import { DollarSign, Mail, Phone, ServerIcon, Users } from "lucide-react";
-import { useMemo, useState } from "react";
-import { formatCurrency } from "../../../utils/formatCurrency";
 import {
+  Avatar,
+  Badge,
   Button,
   Card,
   Col,
-  DatePicker,
-  Input,
+  Descriptions,
+  Divider,
   Modal,
-  Radio,
   Row,
-  Select,
   Space,
-  Statistic,
   Table,
+  Tabs,
   Tag,
-  Timeline,
   Typography,
 } from "antd";
-import ActionButtons from "../../../components/ui/buttons/ActionButtons";
+import { useState } from "react";
+import { useGetBookingsApi } from "../../../services/requests/useBookings";
 
-// Mock Data - In a real app, this would come from your API
-const initialData = {
-  branches: [
-    {
-      branchId: 1,
-      branchCode: "BR001",
-      branchName: "Metro Manila Branch",
-      address: "123 EDSA, Quezon City",
-      city: "Quezon City",
-      region: "NCR",
-      contactNumber: "+63 2 1234 5678",
-      email: "metro@hotel.com",
-      operatingHours: "24/7",
-      amenities: JSON.stringify(["WiFi", "Parking", "Restaurant"]),
-      isActive: true,
-      createdAt: "2024-01-15T08:00:00Z",
-    },
-  ],
-  roomTypes: [
-    {
-      roomTypeId: 1,
-      roomTypeCode: "STD",
-      roomTypeName: "Standard Room",
-      description: "Comfortable standard room with basic amenities",
-      bedConfiguration: "Queen Bed",
-      maxOccupancy: 2,
-      roomSize: "25 sqm",
-      amenities: JSON.stringify(["AC", "TV", "WiFi"]),
-      features: JSON.stringify(["Private Bathroom", "Mini Fridge"]),
-      imageUrl: "/images/standard-room.jpg",
-      isActive: true,
-      branchId: 1,
-    },
-  ],
-  rateTypes: [
-    {
-      rateTypeId: 1,
-      rateTypeCode: "HR3",
-      rateTypeName: "3-Hour Rate",
-      duration: 3,
-      durationType: "hours",
-      dayType: "weekday",
-      description: "Standard 3-hour rate for weekdays",
-    },
-  ],
-  rates: [
-    {
-      rateId: 1,
-      roomTypeId: 1,
-      rateTypeId: 1,
-      branchId: 1,
-      baseRate: 1500.0,
-      currency: "PHP",
-      effectiveFrom: "2024-01-01",
-      effectiveTo: "2024-12-31",
-      isActive: true,
-    },
-  ],
-  rooms: [
-    {
-      roomId: 1,
-      branchId: 1,
-      roomNumber: "101",
-      floor: "1st Floor",
-      roomTypeId: 1,
-      roomStatus: "available",
-      lastCleaned: "2024-01-15T10:00:00Z",
-      maintenanceStatus: "none",
-      notes: "",
-      isActive: true,
-    },
-  ],
-  users: [
-    {
-      userId: 1,
-      username: "admin",
-      role: "superAdmin",
-      branchId: null,
-      firstName: "John",
-      lastName: "Doe",
-      email: "admin@hotel.com",
-      contactNumber: "+63 9123456789",
-      isActive: true,
-      lastLogin: "2024-01-15T08:30:00Z",
-      createdAt: "2024-01-01T00:00:00Z",
-    },
-  ],
-  promotions: [
-    {
-      promoId: 1,
-      promoCode: "WELCOME20",
-      promoName: "Welcome Discount",
-      promoType: "percentage",
-      discountValue: 20,
-      minimumStayHours: 3,
-      applicableRoomTypes: JSON.stringify([1]),
-      applicableBranches: JSON.stringify([1]),
-      validFrom: "2024-01-01T00:00:00Z",
-      validTo: "2024-12-31T23:59:59Z",
-      usageLimit: 100,
-      currentUsage: 15,
-      dayTypeRestriction: null,
-      requiresVerification: false,
-      isActive: true,
-      createdAt: "2024-01-01T00:00:00Z",
-    },
-  ],
-  additionalServices: [
-    {
-      serviceId: 1,
-      serviceName: "Extra Guest",
-      serviceType: "extra_guest",
-      basePrice: 500.0,
-      isPerItem: true,
-      isActive: true,
-    },
-  ],
-};
-
-const useModal = () => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [editingRecord, setEditingRecord] = useState(null);
-
-  const showModal = (record = null) => {
-    setEditingRecord(record);
-    setIsVisible(true);
-  };
-
-  const hideModal = () => {
-    setIsVisible(false);
-    setEditingRecord(null);
-  };
-
-  return {
-    isVisible,
-    editingRecord,
-    showModal,
-    hideModal,
-  };
-};
-
-const formatDateTime = (dateString) => {
-  return dayjs(dateString).format("MMM DD, YYYY HH:mm");
-};
-const parseJsonField = (jsonString) => {
-  try {
-    return JSON.parse(jsonString || "[]");
-  } catch {
-    return [];
-  }
-};
+const { Title, Text, Paragraph } = Typography;
+const { TabPane } = Tabs;
 
 const BookingsManagement = () => {
-  // Mock booking data - in real app, this would come from your API
-  const [bookings, setBookings] = useState([
-    {
-      bookingId: 1,
-      bookingNumber: "BK240815001",
-      guestName: "Juan Dela Cruz",
-      guestEmail: "juan.delacruz@email.com",
-      guestPhone: "+63 9123456789",
-      branchId: 1,
-      roomId: 1,
-      roomNumber: "101",
-      roomTypeId: 1,
-      rateId: 1,
-      checkInDate: "2024-08-17T14:00:00Z",
-      checkOutDate: "2024-08-17T17:00:00Z",
-      bookingStatus: "confirmed",
-      paymentStatus: "paid",
-      totalAmount: 1500.0,
-      discountAmount: 300.0,
-      finalAmount: 1200.0,
-      currency: "PHP",
-      promoCode: "WELCOME20",
-      additionalServices: JSON.stringify([
-        { serviceId: 1, quantity: 1, amount: 500 },
-      ]),
-      specialRequests: "Late check-in requested",
-      numberOfGuests: 2,
-      bookingSource: "online",
-      createdAt: "2024-08-15T10:30:00Z",
-      updatedAt: "2024-08-15T10:30:00Z",
-      checkedInAt: null,
-      checkedOutAt: null,
-      cancelledAt: null,
-      cancellationReason: null,
-    },
-    {
-      bookingId: 2,
-      bookingNumber: "BK240815002",
-      guestName: "Maria Santos",
-      guestEmail: "maria.santos@email.com",
-      guestPhone: "+63 9987654321",
-      branchId: 1,
-      roomId: 1,
-      roomNumber: "102",
-      roomTypeId: 1,
-      rateId: 1,
-      checkInDate: "2024-08-16T12:00:00Z",
-      checkOutDate: "2024-08-16T18:00:00Z",
-      bookingStatus: "checked_in",
-      paymentStatus: "paid",
-      totalAmount: 1500.0,
-      discountAmount: 0.0,
-      finalAmount: 1500.0,
-      currency: "PHP",
-      promoCode: null,
-      additionalServices: JSON.stringify([]),
-      specialRequests: "",
-      numberOfGuests: 1,
-      bookingSource: "walk_in",
-      createdAt: "2024-08-15T14:20:00Z",
-      updatedAt: "2024-08-16T12:05:00Z",
-      checkedInAt: "2024-08-16T12:05:00Z",
-      checkedOutAt: null,
-      cancelledAt: null,
-      cancellationReason: null,
-    },
-    {
-      bookingId: 3,
-      bookingNumber: "BK240815003",
-      guestName: "Robert Johnson",
-      guestEmail: "robert.j@email.com",
-      guestPhone: "+63 9111222333",
-      branchId: 1,
-      roomId: 1,
-      roomNumber: "103",
-      roomTypeId: 1,
-      rateId: 1,
-      checkInDate: "2024-08-14T15:00:00Z",
-      checkOutDate: "2024-08-14T21:00:00Z",
-      bookingStatus: "completed",
-      paymentStatus: "paid",
-      totalAmount: 1500.0,
-      discountAmount: 0.0,
-      finalAmount: 1500.0,
-      currency: "PHP",
-      promoCode: null,
-      additionalServices: JSON.stringify([
-        { serviceId: 1, quantity: 2, amount: 1000 },
-      ]),
-      specialRequests: "Extra towels",
-      numberOfGuests: 3,
-      bookingSource: "phone",
-      createdAt: "2024-08-14T13:00:00Z",
-      updatedAt: "2024-08-14T21:15:00Z",
-      checkedInAt: "2024-08-14T15:10:00Z",
-      checkedOutAt: "2024-08-14T21:15:00Z",
-      cancelledAt: null,
-      cancellationReason: null,
-    },
-    {
-      bookingId: 4,
-      bookingNumber: "BK240815004",
-      guestName: "Anna Garcia",
-      guestEmail: "anna.garcia@email.com",
-      guestPhone: "+63 9444555666",
-      branchId: 1,
-      roomId: 1,
-      roomNumber: "104",
-      roomTypeId: 1,
-      rateId: 1,
-      checkInDate: "2024-08-18T10:00:00Z",
-      checkOutDate: "2024-08-18T16:00:00Z",
-      bookingStatus: "cancelled",
-      paymentStatus: "refunded",
-      totalAmount: 1500.0,
-      discountAmount: 0.0,
-      finalAmount: 1500.0,
-      currency: "PHP",
-      promoCode: null,
-      additionalServices: JSON.stringify([]),
-      specialRequests: "",
-      numberOfGuests: 2,
-      bookingSource: "online",
-      createdAt: "2024-08-15T16:45:00Z",
-      updatedAt: "2024-08-16T09:30:00Z",
-      checkedInAt: null,
-      checkedOutAt: null,
-      cancelledAt: "2024-08-16T09:30:00Z",
-      cancellationReason: "Change in plans",
-    },
-  ]);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
-  const [branches] = useState(initialData.branches);
-  const [roomTypes] = useState(initialData.roomTypes);
-  const [additionalServices] = useState(initialData.additionalServices);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [dateFilter, setDateFilter] = useState([]);
-  const [filters, setFilters] = useState({});
-  const [viewMode, setViewMode] = useState("all"); // all, today, upcoming, history
-  const { isVisible, editingRecord, showModal, hideModal } = useModal();
+  // Sample booking data
+  // const bookingsData = [
+  //   {
+  //     bookingId: 43,
+  //     bookingReference: "BK86506760405",
+  //     branchId: 1,
+  //     roomId: 1,
+  //     roomTypeId: 1,
+  //     rateId: 1,
+  //     rateTypeId: 1,
+  //     numberOfGuests: 2,
+  //     checkInDateTime: "2025-08-30T20:41:46.741Z",
+  //     expectedCheckOutDateTime: "2025-08-30T23:41:46.741Z",
+  //     actualCheckInDateTime: null,
+  //     actualCheckOutDateTime: null,
+  //     stayDuration: 3,
+  //     stayDurationType: "hours",
+  //     bookingStatus: "confirmed",
+  //     paymentStatus: "partial",
+  //     baseAmount: 1350,
+  //     discountAmount: 0,
+  //     taxAmount: 162,
+  //     totalAmount: 1450,
+  //     currency: "PHP",
+  //     paymentMethod: null,
+  //     specialRequests: null,
+  //     guestNotes: null,
+  //     staffNotes: null,
+  //     source: "walk-in",
+  //     cancellationPolicy: null,
+  //     createdAt: "2025-08-30 20:41:46",
+  //     updatedAt: "2025-08-30 20:41:55",
+  //     createdBy: "3",
+  //     primaryGuestName: null,
+  //     primaryGuestContact: null,
+  //     primaryGuestEmail: null,
+  //     plannedDuration: null,
+  //     promoId: null,
+  //     serviceChargesAmount: 0,
+  //     totalPaid: 1350,
+  //     balanceAmount: 100,
+  //     actualDuration: null,
+  //     cancellationReason: null,
+  //     lastUpdatedBy: null,
+  //     bookingDateTime: null,
+  //     branchCode: "SOGO-EDSA-CUB",
+  //     branchName: "Hotel Sogo EDSA Cubao",
+  //     branchAddress: "1234 EDSA, Cubao, Quezon City",
+  //     branchCity: "Quezon City",
+  //     branchRegion: "Metro Manila",
+  //     branchContact: "63-2-8123-4567",
+  //     branchEmail: "cubao@hotelsogo.com",
+  //     operatingHours: "24/7",
+  //     branchAmenities:
+  //       '["Free WiFi","24-hour Front Desk","Room Service","Cable TV","Air Conditioning"]',
+  //     roomNumber: "101",
+  //     floor: "1",
+  //     roomStatus: "occupied",
+  //     lastCleaned: "2024-08-07",
+  //     maintenanceStatus: "good",
+  //     roomNotes: null,
+  //     roomTypeCode: "PREM",
+  //     roomTypeName: "Premium Room",
+  //     roomTypeDescription:
+  //       "Comfortable and affordable room with essential amenities for budget-conscious travelers",
+  //     bedConfiguration: "Queen Bed",
+  //     maxOccupancy: 2,
+  //     roomSize: "20",
+  //     roomTypeAmenities:
+  //       '["Free WiFi", "Air Conditioning", "LED TV", "Private Bathroom", "Complimentary Toiletries", "Cable Channels"]',
+  //     roomTypeFeatures:
+  //       '["12/24 Hour Rates", "Clean Linens", "Room Service Available", "Safe Environment", "Japanese Theme Decor"]',
+  //     roomTypeImage:
+  //       "https://www.hotelsogo.com/images/photos/1555053327_Premium.jpg",
+  //     rateAmountPerHour: 450,
+  //     rateCurrency: "PHP",
+  //     rateEffectiveFrom: "2025-01-01",
+  //     rateEffectiveTo: "2026-12-31",
+  //     rateTypeCode: "3HR",
+  //     rateTypeName: "3 Hour Rate",
+  //     rateTypeDuration: 3,
+  //     durationType: "HOUR",
+  //     rateTypeDayType: "all",
+  //     rateTypeDescription:
+  //       "Short stay rate for 3 hours - perfect for rest and relaxation",
+  //     createdByUsername: "receptionist",
+  //     createdByFirstName: "receptionist",
+  //     createdByLastName: "user",
+  //     createdByRole: "receptionist",
+  //     lastUpdatedByUsername: null,
+  //     lastUpdatedByFirstName: null,
+  //     lastUpdatedByLastName: null,
+  //     lastUpdatedByRole: null,
+  //     promotion: null,
+  //     additionalCharges: [
+  //       {
+  //         chargeId: 77,
+  //         bookingId: 43,
+  //         serviceId: 1,
+  //         chargeType: "room_service",
+  //         itemDescription: null,
+  //         quantity: 2,
+  //         unitPrice: 50,
+  //         totalAmount: 100,
+  //         appliedAt: null,
+  //         appliedBy: null,
+  //         status: null,
+  //         serviceName: "Extra Towels",
+  //         serviceType: "AMENITY",
+  //         serviceBasePrice: 50,
+  //         isPerItem: 1,
+  //         appliedByUsername: null,
+  //         appliedByFirstName: null,
+  //         appliedByLastName: null,
+  //         approvedByUsername: null,
+  //         approvedByFirstName: null,
+  //         approvedByLastName: null,
+  //       },
+  //     ],
+  //     payments: [
+  //       {
+  //         paymentId: 101,
+  //         bookingId: 43,
+  //         paymentType: "service_charge",
+  //         paymentMethod: "cash",
+  //         amount: 100,
+  //         currency: "PHP",
+  //         paymentDateTime: "2025-08-30 20:41:55",
+  //         transactionReference: null,
+  //         paymentStatus: "pending",
+  //         processedBy: "3",
+  //         notes: null,
+  //         paymentCategory: "additional_service",
+  //         processedAt: "2025-08-30T20:41:55.409Z",
+  //         relatedChargeId: null,
+  //         receiptNumber: null,
+  //         processedByUsername: "receptionist",
+  //         processedByFirstName: "receptionist",
+  //         processedByLastName: "user",
+  //         verifiedByUsername: "receptionist",
+  //         verifiedByFirstName: "receptionist",
+  //         verifiedByLastName: "user",
+  //         relatedChargeDescription: null,
+  //         parentTransactionReference: null,
+  //       },
+  //       {
+  //         paymentId: 100,
+  //         bookingId: 43,
+  //         paymentType: "room_charge",
+  //         paymentMethod: "cash",
+  //         amount: 1350,
+  //         currency: "PHP",
+  //         paymentDateTime: "2025-08-30 20:41:46",
+  //         transactionReference: null,
+  //         paymentStatus: "completed",
+  //         processedBy: "3",
+  //         notes: null,
+  //         paymentCategory: "booking",
+  //         processedAt: "2025-08-30T20:41:46.763Z",
+  //         relatedChargeId: null,
+  //         receiptNumber: null,
+  //         processedByUsername: "receptionist",
+  //         processedByFirstName: "receptionist",
+  //         processedByLastName: "user",
+  //         verifiedByUsername: "receptionist",
+  //         verifiedByFirstName: "receptionist",
+  //         verifiedByLastName: "user",
+  //         relatedChargeDescription: null,
+  //         parentTransactionReference: null,
+  //       },
+  //     ],
+  //     extensions: [],
+  //     statusHistory: [],
+  //   },
+  // ];
 
-  // Enhanced filtering logic
-  const filteredBookings = useMemo(() => {
-    let filteredData = [...bookings];
-
-    // Text search
-    if (searchTerm) {
-      filteredData = filteredData.filter((booking) =>
-        Object.values(booking).some((value) =>
-          value?.toString().toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      );
-    }
-
-    // Date range filter
-    if (dateFilter && dateFilter.length === 2) {
-      const [startDate, endDate] = dateFilter;
-      filteredData = filteredData.filter((booking) => {
-        const checkInDate = dayjs(booking.checkInDate);
-        return (
-          checkInDate.isAfter(startDate.startOf("day").subtract(1, "day")) &&
-          checkInDate.isBefore(endDate.endOf("day").add(1, "day"))
-        );
-      });
-    }
-
-    // View mode filter
-    const today = dayjs();
-    switch (viewMode) {
-      case "today":
-        filteredData = filteredData.filter((booking) => {
-          const checkInDate = dayjs(booking.checkInDate);
-          return checkInDate.isSame(today, "day");
-        });
-        break;
-      case "upcoming":
-        filteredData = filteredData.filter((booking) => {
-          const checkInDate = dayjs(booking.checkInDate);
-          return (
-            checkInDate.isAfter(today, "day") &&
-            ["confirmed", "pending"].includes(booking.bookingStatus)
-          );
-        });
-        break;
-      case "history":
-        filteredData = filteredData.filter((booking) => {
-          return ["completed", "cancelled", "no_show"].includes(
-            booking.bookingStatus
-          );
-        });
-        break;
-      default:
-        // all - no additional filtering
-        break;
-    }
-
-    // Other filters
-    Object.keys(filters).forEach((key) => {
-      if (filters[key] !== undefined && filters[key] !== "") {
-        filteredData = filteredData.filter(
-          (item) => item[key] === filters[key]
-        );
-      }
-    });
-
-    return filteredData.sort(
-      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-    );
-  }, [bookings, searchTerm, dateFilter, viewMode, filters]);
+  const { data: bookingsData } = useGetBookingsApi();
 
   const getStatusColor = (status) => {
     const colors = {
-      pending: "orange",
-      confirmed: "blue",
-      checked_in: "green",
-      completed: "purple",
-      cancelled: "red",
-      no_show: "volcano",
-    };
-    return colors[status] || "default";
-  };
-
-  const getPaymentStatusColor = (status) => {
-    const colors = {
-      pending: "orange",
+      confirmed: "success",
+      pending: "warning",
+      cancelled: "error",
+      completed: "default",
+      occupied: "processing",
+      available: "success",
+      partial: "orange",
       paid: "green",
-      partial: "blue",
-      refunded: "purple",
-      failed: "red",
     };
     return colors[status] || "default";
   };
 
-  const getBookingSourceIcon = (source) => {
-    const icons = {
-      online: <ServerIcon className="w-4 h-4" />,
-      phone: <Phone className="w-4 h-4" />,
-      walk_in: <Users className="w-4 h-4" />,
-      app: <ServerIcon className="w-4 h-4" />,
-    };
-    return icons[source] || <SettingOutlined />;
+  const formatDateTime = (dateTime) => {
+    if (!dateTime) return "-";
+    return new Date(dateTime).toLocaleString();
+  };
+
+  const formatCurrency = (amount, currency = "PHP") => {
+    return new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: currency,
+    }).format(amount);
+  };
+
+  const parseJsonArray = (jsonString) => {
+    try {
+      return JSON.parse(jsonString);
+    } catch {
+      return [];
+    }
+  };
+
+  const showBookingDetails = (booking) => {
+    setSelectedBooking(booking);
+    setModalVisible(true);
   };
 
   const columns = [
     {
-      title: "Booking Details",
-      key: "bookingDetails",
-      width: 200,
-      render: (_, record) => (
+      title: "Booking Reference",
+      dataIndex: "bookingReference",
+      key: "bookingReference",
+      render: (text) => (
+        <Text strong style={{ color: "#1890ff" }}>
+          {text}
+        </Text>
+      ),
+    },
+    {
+      title: "Branch",
+      dataIndex: "branchName",
+      key: "branchName",
+      render: (text, record) => (
         <div>
-          <div className="font-bold text-blue-600">{record.bookingNumber}</div>
-          <div className="font-medium">{record.guestName}</div>
-          <div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-            {getBookingSourceIcon(record.bookingSource)}
-            <span>{record.bookingSource.replace("_", " ")}</span>
-          </div>
-          <div className="text-xs text-gray-500">
-            {record.numberOfGuests} guest(s)
-          </div>
+          <div className="font-medium">{text}</div>
+          <Text type="secondary" className="text-sm">
+            {record.branchCode}
+          </Text>
         </div>
       ),
     },
     {
-      title: "Contact Info",
-      key: "contactInfo",
-      width: 180,
+      title: "Room",
+      key: "room",
       render: (_, record) => (
         <div>
-          <div className="flex items-center gap-1 text-sm">
-            <Mail className="w-3 h-3" />
-            <span className="truncate">{record.guestEmail}</span>
-          </div>
-          <div className="flex items-center gap-1 text-sm mt-1">
-            <Phone className="w-3 h-3" />
-            <span>{record.guestPhone}</span>
-          </div>
+          <div className="font-medium">Room {record.roomNumber}</div>
+          <Text type="secondary" className="text-sm">
+            {record.roomTypeName}
+          </Text>
         </div>
       ),
     },
     {
-      title: "Room & Dates",
-      key: "roomDates",
-      width: 200,
-      render: (_, record) => {
-        const checkIn = dayjs(record.checkInDate);
-        const checkOut = dayjs(record.checkOutDate);
-        const duration = checkOut.diff(checkIn, "hours");
-
-        return (
-          <div>
-            <div className="font-medium">Room {record.roomNumber}</div>
-            <div className="text-sm text-gray-600">
-              {
-                roomTypes.find((rt) => rt.roomTypeId === record.roomTypeId)
-                  ?.roomTypeName
-              }
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              <div>In: {checkIn.format("MMM DD, HH:mm")}</div>
-              <div>Out: {checkOut.format("MMM DD, HH:mm")}</div>
-              <div className="text-blue-600">{duration}h stay</div>
-            </div>
-          </div>
-        );
-      },
+      title: "Check-in",
+      dataIndex: "checkInDateTime",
+      key: "checkInDateTime",
+      render: (text) => <div className="text-sm">{formatDateTime(text)}</div>,
     },
     {
-      title: "Amount",
-      key: "amount",
-      width: 120,
-      render: (_, record) => {
-        const additionalServices = parseJsonField(record.additionalServices);
-        const servicesTotal = additionalServices.reduce(
-          (sum, service) => sum + (service.amount || 0),
-          0
-        );
-
-        return (
-          <div>
-            <div className="font-bold text-green-600">
-              {formatCurrency(record.finalAmount)}
-            </div>
-            {record.discountAmount > 0 && (
-              <div className="text-xs text-red-500">
-                -{formatCurrency(record.discountAmount)}
-              </div>
-            )}
-            {servicesTotal > 0 && (
-              <div className="text-xs text-blue-500">
-                +{formatCurrency(servicesTotal)} services
-              </div>
-            )}
-            {record.promoCode && (
-              <Tag size="small" color="green">
-                {record.promoCode}
-              </Tag>
-            )}
-          </div>
-        );
-      },
-      sorter: (a, b) => a.finalAmount - b.finalAmount,
+      title: "Duration",
+      key: "duration",
+      render: (_, record) => (
+        <Tag icon={<ClockCircleOutlined />} color="blue">
+          {record.stayDuration} {record.stayDurationType}
+        </Tag>
+      ),
     },
     {
       title: "Status",
       key: "status",
-      width: 140,
       render: (_, record) => (
-        <div className="space-y-1">
+        <Space direction="vertical" size="small">
           <Tag color={getStatusColor(record.bookingStatus)}>
-            {record.bookingStatus.replace("_", " ").toUpperCase()}
+            {record.bookingStatus.toUpperCase()}
           </Tag>
-          <Tag color={getPaymentStatusColor(record.paymentStatus)} size="small">
-            {record.paymentStatus.toUpperCase()}
+          <Tag color={getStatusColor(record.paymentStatus)}>
+            Payment: {record.paymentStatus}
           </Tag>
-          {record.checkedInAt && (
-            <div className="text-xs text-green-600">
-              In: {formatDateTime(record.checkedInAt)}
-            </div>
-          )}
-          {record.checkedOutAt && (
-            <div className="text-xs text-purple-600">
-              Out: {formatDateTime(record.checkedOutAt)}
-            </div>
+        </Space>
+      ),
+    },
+    {
+      title: "Total Amount",
+      key: "amount",
+      render: (_, record) => (
+        <div>
+          <div className="font-bold text-lg">
+            {formatCurrency(record.totalAmount)}
+          </div>
+          {record.balanceAmount > 0 && (
+            <Text type="danger" className="text-sm">
+              Balance: {formatCurrency(record.balanceAmount)}
+            </Text>
           )}
         </div>
       ),
-      filters: [
-        { text: "Pending", value: "pending" },
-        { text: "Confirmed", value: "confirmed" },
-        { text: "Checked In", value: "checked_in" },
-        { text: "Completed", value: "completed" },
-        { text: "Cancelled", value: "cancelled" },
-        { text: "No Show", value: "no_show" },
-      ],
-      onFilter: (value, record) => record.bookingStatus === value,
-    },
-    {
-      title: "Created",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      width: 120,
-      render: (date) => <div className="text-xs">{formatDateTime(date)}</div>,
-      sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
     },
     {
       title: "Actions",
       key: "actions",
-      width: 120,
-      fixed: "right",
       render: (_, record) => (
-        <ActionButtons
-          record={record}
-          onEdit={showModal}
-          onDelete={handleCancelBooking}
-          showView
-          onView={handleViewBooking}
-        />
+        <Space>
+          <Button
+            type="primary"
+            size="small"
+            onClick={() => showBookingDetails(record)}
+          >
+            View Details
+          </Button>
+          <Button size="small">Edit</Button>
+        </Space>
       ),
     },
   ];
 
-  const handleViewBooking = (record) => {
-    Modal.info({
-      title: `Booking Details - ${record.bookingNumber}`,
-      width: 700,
-      content: (
-        <div className="space-y-4 mt-4">
-          <Row gutter={16}>
+  const renderBookingDetails = (booking) => {
+    if (!booking) return null;
+
+    const additionalChargesColumns = [
+      {
+        title: "Service",
+        dataIndex: "serviceName",
+        key: "serviceName",
+      },
+      {
+        title: "Type",
+        dataIndex: "serviceType",
+        key: "serviceType",
+        render: (text) => <Tag>{text}</Tag>,
+      },
+      {
+        title: "Quantity",
+        dataIndex: "quantity",
+        key: "quantity",
+      },
+      {
+        title: "Unit Price",
+        dataIndex: "unitPrice",
+        key: "unitPrice",
+        render: (amount) => formatCurrency(amount),
+      },
+      {
+        title: "Total",
+        dataIndex: "totalAmount",
+        key: "totalAmount",
+        render: (amount) => <Text strong>{formatCurrency(amount)}</Text>,
+      },
+    ];
+
+    const paymentsColumns = [
+      {
+        title: "Type",
+        dataIndex: "paymentType",
+        key: "paymentType",
+        render: (text) => (
+          <Tag color="blue">{text.replace("_", " ").toUpperCase()}</Tag>
+        ),
+      },
+      {
+        title: "Method",
+        dataIndex: "paymentMethod",
+        key: "paymentMethod",
+        render: (text) => <Tag color="green">{text?.toUpperCase() || "-"}</Tag>,
+      },
+      {
+        title: "Amount",
+        dataIndex: "amount",
+        key: "amount",
+        render: (amount) => <Text strong>{formatCurrency(amount)}</Text>,
+      },
+      {
+        title: "Status",
+        dataIndex: "paymentStatus",
+        key: "paymentStatus",
+        render: (status) => (
+          <Tag
+            color={getStatusColor(status)}
+            icon={
+              status === "completed" ? (
+                <CheckCircleOutlined />
+              ) : (
+                <ExclamationCircleOutlined />
+              )
+            }
+          >
+            {status.toUpperCase()}
+          </Tag>
+        ),
+      },
+      {
+        title: "Date",
+        dataIndex: "paymentDateTime",
+        key: "paymentDateTime",
+        render: (date) => formatDateTime(date),
+      },
+    ];
+
+    return (
+      <Tabs defaultActiveKey="1">
+        <TabPane tab="Booking Details" key="1">
+          <Row gutter={[16, 16]}>
             <Col span={12}>
-              <div className="space-y-2">
-                <div>
-                  <strong>Guest:</strong> {record.guestName}
-                </div>
-                <div>
-                  <strong>Email:</strong> {record.guestEmail}
-                </div>
-                <div>
-                  <strong>Phone:</strong> {record.guestPhone}
-                </div>
-                <div>
-                  <strong>Guests:</strong> {record.numberOfGuests}
-                </div>
-              </div>
+              <Card
+                title={
+                  <>
+                    <HomeOutlined /> Branch Information
+                  </>
+                }
+                size="small"
+              >
+                <Descriptions column={1} size="small">
+                  <Descriptions.Item label="Branch">
+                    {booking.branchName}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Code">
+                    {booking.branchCode}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Address">
+                    {booking.branchAddress}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Contact">
+                    <Space>
+                      <PhoneOutlined />
+                      {booking.branchContact}
+                      <MailOutlined />
+                      {booking.branchEmail}
+                    </Space>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Hours">
+                    {booking.operatingHours}
+                  </Descriptions.Item>
+                </Descriptions>
+              </Card>
             </Col>
             <Col span={12}>
-              <div className="space-y-2">
-                <div>
-                  <strong>Room:</strong> {record.roomNumber}
-                </div>
-                <div>
-                  <strong>Check-in:</strong>{" "}
-                  {formatDateTime(record.checkInDate)}
-                </div>
-                <div>
-                  <strong>Check-out:</strong>{" "}
-                  {formatDateTime(record.checkOutDate)}
-                </div>
-                <div>
-                  <strong>Source:</strong> {record.bookingSource}
-                </div>
-              </div>
+              <Card
+                title={
+                  <>
+                    <CalendarOutlined /> Booking Information
+                  </>
+                }
+                size="small"
+              >
+                <Descriptions column={1} size="small">
+                  <Descriptions.Item label="Reference">
+                    {booking.bookingReference}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Source">
+                    {booking.source}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Guests">
+                    {booking.numberOfGuests}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Check-in">
+                    {formatDateTime(booking.checkInDateTime)}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Expected Check-out">
+                    {formatDateTime(booking.expectedCheckOutDateTime)}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Duration">
+                    {booking.stayDuration} {booking.stayDurationType}
+                  </Descriptions.Item>
+                </Descriptions>
+              </Card>
             </Col>
           </Row>
 
-          <div>
-            <strong>Payment Summary:</strong>
-            <div className="bg-gray-50 p-3 rounded mt-2">
-              <div className="flex justify-between">
-                <span>Base Amount:</span>
-                <span>{formatCurrency(record.totalAmount)}</span>
-              </div>
-              {record.discountAmount > 0 && (
-                <div className="flex justify-between text-red-600">
-                  <span>Discount:</span>
-                  <span>-{formatCurrency(record.discountAmount)}</span>
+          <Divider />
+
+          <Row gutter={[16, 16]}>
+            <Col span={12}>
+              <Card title="Room Details" size="small">
+                <div className="flex items-center space-x-4 mb-4">
+                  <Avatar size={64} src={booking.roomTypeImage} />
+                  <div>
+                    <Title level={5} className="mb-1">
+                      Room {booking.roomNumber}
+                    </Title>
+                    <Text type="secondary">{booking.roomTypeName}</Text>
+                    <div>
+                      <Tag color={getStatusColor(booking.roomStatus)}>
+                        {booking.roomStatus}
+                      </Tag>
+                    </div>
+                  </div>
                 </div>
-              )}
-              <div className="flex justify-between font-bold border-t pt-2 mt-2">
-                <span>Final Amount:</span>
-                <span>{formatCurrency(record.finalAmount)}</span>
-              </div>
-            </div>
-          </div>
 
-          {record.specialRequests && (
-            <div>
-              <strong>Special Requests:</strong>
-              <div className="bg-blue-50 p-3 rounded mt-2">
-                {record.specialRequests}
-              </div>
-            </div>
-          )}
+                <Descriptions column={1} size="small">
+                  <Descriptions.Item label="Floor">
+                    Floor {booking.floor}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Size">
+                    {booking.roomSize} sqm
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Bed">
+                    {booking.bedConfiguration}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Max Occupancy">
+                    {booking.maxOccupancy} guests
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Last Cleaned">
+                    {booking.lastCleaned}
+                  </Descriptions.Item>
+                </Descriptions>
 
-          {record.cancellationReason && (
-            <div>
-              <strong>Cancellation Reason:</strong>
-              <div className="bg-red-50 p-3 rounded mt-2">
-                {record.cancellationReason}
-              </div>
-            </div>
-          )}
-        </div>
-      ),
-    });
-  };
+                <Divider />
 
-  const handleCancelBooking = (record) => {
-    if (record.bookingStatus === "cancelled") {
-      message.warning("This booking is already cancelled");
-      return;
-    }
-
-    Modal.confirm({
-      title: "Cancel Booking",
-      content: "Are you sure you want to cancel this booking?",
-      onOk() {
-        setBookings((prev) =>
-          prev.map((b) =>
-            b.bookingId === record.bookingId
-              ? {
-                  ...b,
-                  bookingStatus: "cancelled",
-                  paymentStatus: "refunded",
-                  cancelledAt: new Date().toISOString(),
-                  cancellationReason: "Cancelled by admin",
-                  updatedAt: new Date().toISOString(),
+                <div>
+                  <Text strong>Amenities:</Text>
+                  <div className="mt-2">
+                    {parseJsonArray(booking.roomTypeAmenities).map(
+                      (amenity, index) => (
+                        <Tag key={index} className="mb-1">
+                          {amenity}
+                        </Tag>
+                      )
+                    )}
+                  </div>
+                </div>
+              </Card>
+            </Col>
+            <Col span={12}>
+              <Card
+                title={
+                  <>
+                    <DollarOutlined /> Financial Summary
+                  </>
                 }
-              : b
-          )
-        );
-        message.success("Booking cancelled successfully");
-      },
-    });
-  };
+                size="small"
+              >
+                <Descriptions column={1} size="small">
+                  <Descriptions.Item label="Base Amount">
+                    {formatCurrency(booking.baseAmount)}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Discount">
+                    {formatCurrency(booking.discountAmount)}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Tax">
+                    {formatCurrency(booking.taxAmount)}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Service Charges">
+                    {formatCurrency(booking.serviceChargesAmount)}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Total Amount">
+                    <Text strong className="text-lg">
+                      {formatCurrency(booking.totalAmount)}
+                    </Text>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Total Paid">
+                    {formatCurrency(booking.totalPaid)}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Balance">
+                    <Text
+                      type={booking.balanceAmount > 0 ? "danger" : "success"}
+                    >
+                      {formatCurrency(booking.balanceAmount)}
+                    </Text>
+                  </Descriptions.Item>
+                </Descriptions>
 
-  const handleCheckIn = (record) => {
-    setBookings((prev) =>
-      prev.map((b) =>
-        b.bookingId === record.bookingId
-          ? {
-              ...b,
-              bookingStatus: "checked_in",
-              checkedInAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            }
-          : b
-      )
+                <Divider />
+
+                <Descriptions column={1} size="small">
+                  <Descriptions.Item label="Rate">
+                    {booking.rateTypeName}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Rate Description">
+                    {booking.rateTypeDescription}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Per Hour">
+                    {formatCurrency(booking.rateAmountPerHour)}
+                  </Descriptions.Item>
+                </Descriptions>
+              </Card>
+            </Col>
+          </Row>
+        </TabPane>
+
+        <TabPane tab="Additional Charges" key="2">
+          <Table
+            columns={additionalChargesColumns}
+            dataSource={booking.additionalCharges}
+            rowKey="chargeId"
+            size="small"
+            pagination={false}
+          />
+        </TabPane>
+
+        <TabPane tab="Payments" key="3">
+          <Table
+            columns={paymentsColumns}
+            dataSource={booking.payments}
+            rowKey={(record, index) => `${record.paymentId}-${index}`}
+            size="small"
+            pagination={false}
+          />
+        </TabPane>
+
+        <TabPane tab="Staff Information" key="4">
+          <Row gutter={[16, 16]}>
+            <Col span={12}>
+              <Card title="Created By" size="small">
+                <Descriptions column={1} size="small">
+                  <Descriptions.Item label="Username">
+                    {booking.createdByUsername}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Name">
+                    {booking.createdByFirstName} {booking.createdByLastName}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Role">
+                    {booking.createdByRole}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Created At">
+                    {formatDateTime(booking.createdAt)}
+                  </Descriptions.Item>
+                </Descriptions>
+              </Card>
+            </Col>
+            <Col span={12}>
+              <Card title="Last Updated By" size="small">
+                <Descriptions column={1} size="small">
+                  <Descriptions.Item label="Username">
+                    {booking.lastUpdatedByUsername || "N/A"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Name">
+                    {booking.lastUpdatedByFirstName &&
+                    booking.lastUpdatedByLastName
+                      ? `${booking.lastUpdatedByFirstName} ${booking.lastUpdatedByLastName}`
+                      : "N/A"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Role">
+                    {booking.lastUpdatedByRole || "N/A"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Updated At">
+                    {formatDateTime(booking.updatedAt)}
+                  </Descriptions.Item>
+                </Descriptions>
+              </Card>
+            </Col>
+          </Row>
+        </TabPane>
+      </Tabs>
     );
-    message.success("Guest checked in successfully");
-  };
-
-  const handleCheckOut = (record) => {
-    setBookings((prev) =>
-      prev.map((b) =>
-        b.bookingId === record.bookingId
-          ? {
-              ...b,
-              bookingStatus: "completed",
-              checkedOutAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            }
-          : b
-      )
-    );
-    message.success("Guest checked out successfully");
-  };
-
-  // Summary statistics
-  const stats = {
-    total: bookings.length,
-    today: bookings.filter((b) => dayjs(b.checkInDate).isSame(dayjs(), "day"))
-      .length,
-    upcoming: bookings.filter((b) =>
-      dayjs(b.checkInDate).isAfter(dayjs(), "day")
-    ).length,
-    revenue: bookings
-      .filter((b) => ["completed", "checked_in"].includes(b.bookingStatus))
-      .reduce((sum, b) => sum + b.finalAmount, 0),
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <Typography.Title level={2} className="mb-0">
-          Bookings Management
-        </Typography.Title>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => showModal()}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          New Booking
-        </Button>
+    <div className="p-6 bg-gray-50 min-h-screen">
+      <div className="mb-6">
+        <Title level={2} className="mb-2">
+          Hotel Bookings
+        </Title>
+        <Paragraph type="secondary">
+          Manage and view all hotel bookings across branches
+        </Paragraph>
       </div>
 
-      {/* Summary Cards */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={6}>
-          <Card
-            className={`text-center shadow-sm cursor-pointer transition-all ${
-              viewMode === "all"
-                ? "border-blue-500 bg-blue-50"
-                : "hover:shadow-md"
-            }`}
-            onClick={() => setViewMode("all")}
-          >
-            <Statistic
-              title="Total Bookings"
-              value={stats.total}
-              prefix={<HomeOutlined className="text-blue-600" />}
-              valueStyle={{ color: "#1890ff" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={6}>
-          <Card
-            className={`text-center shadow-sm cursor-pointer transition-all ${
-              viewMode === "today"
-                ? "border-green-500 bg-green-50"
-                : "hover:shadow-md"
-            }`}
-            onClick={() => setViewMode("today")}
-          >
-            <Statistic
-              title="Today's Bookings"
-              value={stats.today}
-              prefix={<HomeOutlined className="text-green-600" />}
-              valueStyle={{ color: "#52c41a" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={6}>
-          <Card
-            className={`text-center shadow-sm cursor-pointer transition-all ${
-              viewMode === "upcoming"
-                ? "border-orange-500 bg-orange-50"
-                : "hover:shadow-md"
-            }`}
-            onClick={() => setViewMode("upcoming")}
-          >
-            <Statistic
-              title="Upcoming"
-              value={stats.upcoming}
-              prefix={<HomeOutlined className="text-orange-600" />}
-              valueStyle={{ color: "#fa8c16" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={6}>
-          <Card
-            className={`text-center shadow-sm cursor-pointer transition-all ${
-              viewMode === "history"
-                ? "border-purple-500 bg-purple-50"
-                : "hover:shadow-md"
-            }`}
-            onClick={() => setViewMode("history")}
-          >
-            <Statistic
-              title="Revenue"
-              value={stats.revenue}
-              prefix={<DollarSign className="w-5 h-5 text-purple-600" />}
-              formatter={(value) => formatCurrency(value)}
-              valueStyle={{ color: "#722ed1" }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* Advanced Filters */}
-      <Card className="shadow-sm">
-        <Row gutter={[16, 16]} align="middle">
-          <Col flex="auto">
-            <Input.Search
-              placeholder="Search by booking number, guest name, email, or phone..."
-              allowClear
-              onSearch={setSearchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-md"
-            />
-          </Col>
-          <Col>
-            <Space wrap>
-              <DatePicker.RangePicker
-                placeholder={["Start Date", "End Date"]}
-                onChange={setDateFilter}
-                className="w-64"
-              />
-              <Select
-                placeholder="Branch"
-                allowClear
-                onChange={(value) =>
-                  setFilters((prev) => ({ ...prev, branchId: value }))
-                }
-                className="w-40"
-              >
-                {branches.map((branch) => (
-                  <Select.Option key={branch.branchId} value={branch.branchId}>
-                    {branch.branchName}
-                  </Select.Option>
-                ))}
-              </Select>
-              <Select
-                placeholder="Status"
-                allowClear
-                onChange={(value) =>
-                  setFilters((prev) => ({ ...prev, bookingStatus: value }))
-                }
-                className="w-32"
-              >
-                <Select.Option value="pending">Pending</Select.Option>
-                <Select.Option value="confirmed">Confirmed</Select.Option>
-                <Select.Option value="checked_in">Checked In</Select.Option>
-                <Select.Option value="completed">Completed</Select.Option>
-                <Select.Option value="cancelled">Cancelled</Select.Option>
-              </Select>
-              <Button icon={<ExportOutlined />}>Export</Button>
-              <Button icon={<ReloadOutlined />}>Refresh</Button>
-            </Space>
-          </Col>
-        </Row>
-      </Card>
-
-      <Card className="shadow-sm">
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-2">
-            <Typography.Text strong>View: </Typography.Text>
-            <Radio.Group
-              value={viewMode}
-              onChange={(e) => setViewMode(e.target.value)}
-              size="small"
-            >
-              <Radio.Button value="all">All Bookings</Radio.Button>
-              <Radio.Button value="today">Today</Radio.Button>
-              <Radio.Button value="upcoming">Upcoming</Radio.Button>
-              <Radio.Button value="history">History</Radio.Button>
-            </Radio.Group>
-          </div>
-          <Typography.Text type="secondary">
-            Showing {filteredBookings.length} of {bookings.length} bookings
-          </Typography.Text>
+      <Card>
+        <div className="mb-4 flex justify-between items-center">
+          <Space>
+            <Badge count={bookingsData.length} showZero>
+              <Button icon={<CalendarOutlined />}>Total Bookings</Button>
+            </Badge>
+          </Space>
+          <Space>
+            <Button type="primary">Add New Booking</Button>
+            <Button icon={<SettingOutlined />}>Settings</Button>
+          </Space>
         </div>
 
         <Table
           columns={columns}
-          dataSource={filteredBookings}
+          dataSource={bookingsData}
           rowKey="bookingId"
           pagination={{
             pageSize: 10,
@@ -915,123 +717,30 @@ const BookingsManagement = () => {
             showTotal: (total, range) =>
               `${range[0]}-${range[1]} of ${total} bookings`,
           }}
-          scroll={{ x: 1400 }}
-          expandable={{
-            expandedRowRender: (record) => {
-              const additionalServices = parseJsonField(
-                record.additionalServices
-              );
-              return (
-                <div className="bg-gray-50 p-4 rounded">
-                  <Row gutter={[16, 16]}>
-                    <Col span={8}>
-                      <div>
-                        <Typography.Text strong>Timeline:</Typography.Text>
-                        <Timeline size="small" className="mt-2">
-                          <Timeline.Item color="blue">
-                            Created: {formatDateTime(record.createdAt)}
-                          </Timeline.Item>
-                          {record.checkedInAt && (
-                            <Timeline.Item color="green">
-                              Checked In: {formatDateTime(record.checkedInAt)}
-                            </Timeline.Item>
-                          )}
-                          {record.checkedOutAt && (
-                            <Timeline.Item color="purple">
-                              Checked Out: {formatDateTime(record.checkedOutAt)}
-                            </Timeline.Item>
-                          )}
-                          {record.cancelledAt && (
-                            <Timeline.Item color="red">
-                              Cancelled: {formatDateTime(record.cancelledAt)}
-                            </Timeline.Item>
-                          )}
-                        </Timeline>
-                      </div>
-                    </Col>
-                    <Col span={8}>
-                      <div>
-                        <Typography.Text strong>
-                          Additional Services:
-                        </Typography.Text>
-                        {additionalServices.length > 0 ? (
-                          <div className="mt-2 space-y-1">
-                            {additionalServices.map((service, idx) => {
-                              const serviceInfo = additionalServices.find(
-                                (s) => s.serviceId === service.serviceId
-                              );
-                              return (
-                                <div key={idx} className="text-sm">
-                                  Service {service.serviceId} x
-                                  {service.quantity} -{" "}
-                                  {formatCurrency(service.amount)}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <Typography.Text
-                            type="secondary"
-                            className="mt-2 block"
-                          >
-                            No additional services
-                          </Typography.Text>
-                        )}
-                      </div>
-                    </Col>
-                    <Col span={8}>
-                      <div>
-                        <Typography.Text strong>Quick Actions:</Typography.Text>
-                        <div className="mt-2 space-x-2">
-                          {record.bookingStatus === "confirmed" && (
-                            <Button
-                              size="small"
-                              type="primary"
-                              onClick={() => handleCheckIn(record)}
-                            >
-                              Check In
-                            </Button>
-                          )}
-                          {record.bookingStatus === "checked_in" && (
-                            <Button
-                              size="small"
-                              type="primary"
-                              onClick={() => handleCheckOut(record)}
-                            >
-                              Check Out
-                            </Button>
-                          )}
-                          <Button
-                            size="small"
-                            onClick={() => handleViewBooking(record)}
-                          >
-                            View Details
-                          </Button>
-                        </div>
-                      </div>
-                    </Col>
-                  </Row>
-                </div>
-              );
-            },
-          }}
+          scroll={{ x: 1200 }}
         />
       </Card>
 
       <Modal
-        title="New Booking"
-        open={isVisible}
-        onCancel={hideModal}
-        footer={null}
-        width={800}
+        title={
+          <Space>
+            <InfoCircleOutlined />
+            Booking Details - {selectedBooking?.bookingReference}
+          </Space>
+        }
+        open={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        width={1200}
+        footer={[
+          <Button key="close" onClick={() => setModalVisible(false)}>
+            Close
+          </Button>,
+          <Button key="edit" type="primary">
+            Edit Booking
+          </Button>,
+        ]}
       >
-        <div className="text-center py-8">
-          <Typography.Text className="text-gray-500">
-            Booking creation form would be implemented here. This would include
-            guest information, room selection, dates, rates, and payment
-            details.
-          </Typography.Text>
-        </div>
+        {renderBookingDetails(selectedBooking)}
       </Modal>
     </div>
   );

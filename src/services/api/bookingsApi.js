@@ -55,6 +55,15 @@ export const getBookingByRoomIdApi = async (roomId) => {
   }
 };
 
+export const getBookingsApi = async () => {
+  try {
+    const result = await axiosDefault.get(`/api/bookings`);
+    return result.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+};
+
 export const paymentSettleApi = async ({ bookingId, ...payload }) => {
   try {
     const result = await axiosDefault.post(
