@@ -3,6 +3,7 @@
 import { App, Drawer, Select, Typography } from "antd";
 import { Bed, CheckCircle, CreditCard, Plus, Receipt, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import BookingNotes from "../../../components/ui/cards/BookingNotes";
 import { useFilters } from "../../../hooks/useFilters";
 import { ROOM_STATUSES, STATUS_CONFIGS } from "../../../lib/constants";
 import { useAddBookingApi } from "../../../services/requests/useBookings";
@@ -13,8 +14,6 @@ import BookingForm from "./components/BookingForm";
 import BookingModal from "./components/BookingModal";
 import CurrentBookedRoom from "./components/CurrentBooking";
 import RoomCard from "./components/RoomCard";
-import BookingNotes from "../../../components/ui/cards/BookingNotes";
-import PaymentSettlement from "./components/PaymentSettlement";
 
 const { Text } = Typography;
 
@@ -78,7 +77,6 @@ const RoomBooking = () => {
   const handleConfirmBooking = useCallback(
     (bookingData) => {
       const bookingReference = `BK${Date.now().toString().slice(-8)}`;
-      console.log(bookingData);
 
       const bookingPayload = {
         bookingReference,

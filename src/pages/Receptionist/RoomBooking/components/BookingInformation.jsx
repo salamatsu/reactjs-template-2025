@@ -68,22 +68,12 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-// Loading component
-const LoadingSpinner = ({ size = "default" }) => (
-  <div className="flex items-center justify-center p-4">
-    <Spin size={size} />
-  </div>
-);
-
 const BookingInformation = memo(
   ({ bookingData, loading = false, request, settlePayment }) => {
     const { modal } = App.useApp();
 
     const [selectedServices, setSelectedServices] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState(
-      PAYMENT_METHODS[0]?.value || "cash"
-    );
     const [markAsPaid, setMarkAsPaid] = useState(false);
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
@@ -140,7 +130,7 @@ const BookingInformation = memo(
 
       const PaymentConfirmationContent = () => {
         const [localPaymentMethod, setLocalPaymentMethod] =
-          useState(paymentMethod);
+          useState(PAYMENT_METHODS[0]?.value || "cash");
         const [localMarkAsPaid, setLocalMarkAsPaid] = useState(markAsPaid);
 
         const handleSubmit = async () => {
@@ -174,7 +164,7 @@ const BookingInformation = memo(
                 console.error("Payment error:", error);
                 message.error(
                   error?.response?.data?.message ||
-                    "Failed to process payment. Please try again."
+                  "Failed to process payment. Please try again."
                 );
               },
               onSettled: () => {
@@ -185,7 +175,7 @@ const BookingInformation = memo(
             console.error("Payment error:", error);
             message.error(
               error?.response?.data?.message ||
-                "Failed to process payment. Please try again."
+              "Failed to process payment. Please try again."
             );
           } finally {
             setIsProcessingPayment(false);
@@ -314,7 +304,6 @@ const BookingInformation = memo(
     }, [
       selectedServices,
       bookingData,
-      paymentMethod,
       markAsPaid,
       addAdditionalServices,
       formatCurrency,
@@ -574,9 +563,8 @@ const BookingInformation = memo(
                 <div className="flex justify-between items-center">
                   <p className="text-sm text-gray-600">Balance</p>
                   <p
-                    className={`font-semibold ${
-                      balanceAmount > 0 ? "text-red-600" : "text-green-600"
-                    }`}
+                    className={`font-semibold ${balanceAmount > 0 ? "text-red-600" : "text-green-600"
+                      }`}
                   >
                     {formatCurrency(balanceAmount)}
                   </p>
@@ -844,11 +832,10 @@ const BookingInformation = memo(
               >
                 {isProcessingPayment
                   ? "Processing..."
-                  : `Proceed to Payment ${
-                      totalSelectedValue > 0
-                        ? formatCurrency(totalSelectedValue)
-                        : ""
-                    }`}
+                  : `Proceed to Payment ${totalSelectedValue > 0
+                    ? formatCurrency(totalSelectedValue)
+                    : ""
+                  }`}
               </Button>
             </div>
           }

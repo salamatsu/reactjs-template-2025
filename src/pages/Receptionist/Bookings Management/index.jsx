@@ -18,6 +18,7 @@ import {
   Col,
   Descriptions,
   Divider,
+  Drawer,
   Modal,
   Row,
   Space,
@@ -253,182 +254,171 @@ const BookingsManagement = () => {
     return (
       <Tabs defaultActiveKey="1">
         <TabPane tab="Booking Details" key="1">
-          <Row gutter={[16, 16]}>
-            <Col span={12}>
-              <Card
-                title={
-                  <>
-                    <HomeOutlined /> Branch Information
-                  </>
-                }
-                size="small"
-              >
-                <Descriptions column={1} size="small">
-                  <Descriptions.Item label="Branch">
-                    {booking.branchName}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Code">
-                    {booking.branchCode}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Address">
-                    {booking.branchAddress}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Contact">
-                    <Space>
-                      <PhoneOutlined />
-                      {booking.branchContact}
-                      <MailOutlined />
-                      {booking.branchEmail}
-                    </Space>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Hours">
-                    {booking.operatingHours}
-                  </Descriptions.Item>
-                </Descriptions>
-              </Card>
-            </Col>
-            <Col span={12}>
-              <Card
-                title={
-                  <>
-                    <CalendarOutlined /> Booking Information
-                  </>
-                }
-                size="small"
-              >
-                <Descriptions column={1} size="small">
-                  <Descriptions.Item label="Reference">
-                    {booking.bookingReference}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Source">
-                    {booking.source}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Guests">
-                    {booking.numberOfGuests}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Check-in">
-                    {formatDateTime(booking.checkInDateTime)}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Expected Check-out">
-                    {formatDateTime(booking.expectedCheckOutDateTime)}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Duration">
-                    {booking.stayDuration} {booking.stayDurationType}
-                  </Descriptions.Item>
-                </Descriptions>
-              </Card>
-            </Col>
-          </Row>
 
-          <Divider />
+          <Card
+            title={
+              <>
+                <HomeOutlined /> Branch Information
+              </>
+            }
+            size="small"
+          >
+            <Descriptions column={1} size="small">
+              <Descriptions.Item label="Branch">
+                {booking.branchName}
+              </Descriptions.Item>
+              <Descriptions.Item label="Code">
+                {booking.branchCode}
+              </Descriptions.Item>
+              <Descriptions.Item label="Address">
+                {booking.branchAddress}
+              </Descriptions.Item>
+              <Descriptions.Item label="Contact">
+                <Space>
+                  <PhoneOutlined />
+                  {booking.branchContact}
+                  <MailOutlined />
+                  {booking.branchEmail}
+                </Space>
+              </Descriptions.Item>
+              <Descriptions.Item label="Hours">
+                {booking.operatingHours}
+              </Descriptions.Item>
+            </Descriptions>
+          </Card>
+          <Card
+            title={
+              <>
+                <CalendarOutlined /> Booking Information
+              </>
+            }
+            size="small"
+          >
+            <Descriptions column={1} size="small">
+              <Descriptions.Item label="Reference">
+                {booking.bookingReference}
+              </Descriptions.Item>
+              <Descriptions.Item label="Source">
+                {booking.source}
+              </Descriptions.Item>
+              <Descriptions.Item label="Guests">
+                {booking.numberOfGuests}
+              </Descriptions.Item>
+              <Descriptions.Item label="Check-in">
+                {formatDateTime(booking.checkInDateTime)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Expected Check-out">
+                {formatDateTime(booking.expectedCheckOutDateTime)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Duration">
+                {booking.stayDuration} {booking.stayDurationType}
+              </Descriptions.Item>
+            </Descriptions>
+          </Card>
 
-          <Row gutter={[16, 16]}>
-            <Col span={12}>
-              <Card title="Room Details" size="small">
-                <div className="flex items-center space-x-4 mb-4">
-                  <Avatar size={64} src={booking.roomTypeImage} />
-                  <div>
-                    <Title level={5} className="mb-1">
-                      Room {booking.roomNumber}
-                    </Title>
-                    <Text type="secondary">{booking.roomTypeName}</Text>
-                    <div>
-                      <Tag color={getStatusColor(booking.roomStatus)}>
-                        {booking.roomStatus}
-                      </Tag>
-                    </div>
-                  </div>
-                </div>
-
-                <Descriptions column={1} size="small">
-                  <Descriptions.Item label="Floor">
-                    Floor {booking.floor}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Size">
-                    {booking.roomSize} sqm
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Bed">
-                    {booking.bedConfiguration}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Max Occupancy">
-                    {booking.maxOccupancy} guests
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Last Cleaned">
-                    {booking.lastCleaned}
-                  </Descriptions.Item>
-                </Descriptions>
-
-                <Divider />
-
+          <Card title="Room Details" size="small" >
+            <div className="flex items-center space-x-4 mb-4">
+              <Avatar size={64} src={booking.roomTypeImage} />
+              <div>
+                <Title level={5} className="mb-1">
+                  Room {booking.roomNumber}
+                </Title>
+                <Text type="secondary">{booking.roomTypeName}</Text>
                 <div>
-                  <Text strong>Amenities:</Text>
-                  <div className="mt-2">
-                    {parseJsonArray(booking.roomTypeAmenities).map(
-                      (amenity, index) => (
-                        <Tag key={index} className="mb-1">
-                          {amenity}
-                        </Tag>
-                      )
-                    )}
-                  </div>
+                  <Tag color={getStatusColor(booking.roomStatus)}>
+                    {booking.roomStatus}
+                  </Tag>
                 </div>
-              </Card>
-            </Col>
-            <Col span={12}>
-              <Card
-                title={
-                  <>
-                    <DollarOutlined /> Financial Summary
-                  </>
-                }
-                size="small"
-              >
-                <Descriptions column={1} size="small">
-                  <Descriptions.Item label="Base Amount">
-                    {formatCurrency(booking.baseAmount)}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Discount">
-                    {formatCurrency(booking.discountAmount)}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Tax">
-                    {formatCurrency(booking.taxAmount)}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Service Charges">
-                    {formatCurrency(booking.serviceChargesAmount)}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Total Amount">
-                    <Text strong className="text-lg">
-                      {formatCurrency(booking.totalAmount)}
-                    </Text>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Total Paid">
-                    {formatCurrency(booking.totalPaid)}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Balance">
-                    <Text
-                      type={booking.balanceAmount > 0 ? "danger" : "success"}
-                    >
-                      {formatCurrency(booking.balanceAmount)}
-                    </Text>
-                  </Descriptions.Item>
-                </Descriptions>
+              </div>
+            </div>
 
-                <Divider />
+            <Descriptions column={1} size="small">
+              <Descriptions.Item label="Floor">
+                Floor {booking.floor}
+              </Descriptions.Item>
+              <Descriptions.Item label="Size">
+                {booking.roomSize} sqm
+              </Descriptions.Item>
+              <Descriptions.Item label="Bed">
+                {booking.bedConfiguration}
+              </Descriptions.Item>
+              <Descriptions.Item label="Max Occupancy">
+                {booking.maxOccupancy} guests
+              </Descriptions.Item>
+              <Descriptions.Item label="Last Cleaned">
+                {booking.lastCleaned}
+              </Descriptions.Item>
+            </Descriptions>
 
-                <Descriptions column={1} size="small">
-                  <Descriptions.Item label="Rate">
-                    {booking.rateTypeName}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Rate Description">
-                    {booking.rateTypeDescription}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Per Hour">
-                    {formatCurrency(booking.rateAmountPerHour)}
-                  </Descriptions.Item>
-                </Descriptions>
-              </Card>
-            </Col>
-          </Row>
+            <Divider />
+
+            <div>
+              <Text strong>Amenities:</Text>
+              <div className="mt-2">
+                {parseJsonArray(booking.roomTypeAmenities).map(
+                  (amenity, index) => (
+                    <Tag key={index} className="mb-1">
+                      {amenity}
+                    </Tag>
+                  )
+                )}
+              </div>
+            </div>
+          </Card>
+
+          <Card
+            title={
+              <>
+                <DollarOutlined /> Financial Summary
+              </>
+            }
+            size="small"
+          >
+            <Descriptions column={1} size="small">
+              <Descriptions.Item label="Base Amount">
+                {formatCurrency(booking.baseAmount)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Discount">
+                {formatCurrency(booking.discountAmount)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Tax">
+                {formatCurrency(booking.taxAmount)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Service Charges">
+                {formatCurrency(booking.serviceChargesAmount)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Total Amount">
+                <Text strong className="text-lg">
+                  {formatCurrency(booking.totalAmount)}
+                </Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Total Paid">
+                {formatCurrency(booking.totalPaid)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Balance">
+                <Text
+                  type={booking.balanceAmount > 0 ? "danger" : "success"}
+                >
+                  {formatCurrency(booking.balanceAmount)}
+                </Text>
+              </Descriptions.Item>
+            </Descriptions>
+
+            <Divider />
+
+            <Descriptions column={1} size="small">
+              <Descriptions.Item label="Rate">
+                {booking.rateTypeName}
+              </Descriptions.Item>
+              <Descriptions.Item label="Rate Description">
+                {booking.rateTypeDescription}
+              </Descriptions.Item>
+              <Descriptions.Item label="Per Hour">
+                {formatCurrency(booking.rateAmountPerHour)}
+              </Descriptions.Item>
+            </Descriptions>
+          </Card>
+
         </TabPane>
 
         <TabPane tab="Additional Charges" key="2">
@@ -536,7 +526,7 @@ const BookingsManagement = () => {
         />
       </Card>
 
-      <Modal
+      <Drawer
         title={
           <Space>
             <InfoCircleOutlined />
@@ -544,19 +534,20 @@ const BookingsManagement = () => {
           </Space>
         }
         open={modalVisible}
-        onCancel={() => setModalVisible(false)}
+        onClose={() => setModalVisible(false)}
         width={1200}
-        footer={[
-          <Button key="close" onClick={() => setModalVisible(false)}>
-            Close
-          </Button>,
-          <Button key="edit" type="primary">
-            Edit Booking
-          </Button>,
-        ]}
+        placement="right"
+      // footer={[
+      //   <Button key="close" onClick={() => setModalVisible(false)}>
+      //     Close
+      //   </Button>,
+      //   <Button key="edit" type="primary">
+      //     Edit Booking
+      //   </Button>,
+      // ]}
       >
         {renderBookingDetails(selectedBooking)}
-      </Modal>
+      </Drawer>
     </div>
   );
 };
