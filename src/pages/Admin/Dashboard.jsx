@@ -10,6 +10,7 @@ import {
   Drawer,
   Dropdown,
   Form,
+  Input,
   List,
   Menu,
   Modal,
@@ -30,6 +31,9 @@ import {
 } from "antd";
 import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
+import HighchartsMore from "highcharts/highcharts-more";
+import HighchartsHeatmap from "highcharts/modules/heatmap";
+import HighchartsSolidGauge from "highcharts/modules/solid-gauge";
 import {
   Activity,
   AlertTriangle,
@@ -47,18 +51,29 @@ import {
   Eye,
   FileText,
   Filter,
+  Moon,
   MoreHorizontal,
+  RefreshCw,
+  Settings,
   Star,
+  Sun,
   Target,
   TrendingUp,
   Users,
+  Wifi,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
+
+// Initialize Highcharts modules
+// HighchartsMore(Highcharts);
+// HighchartsHeatmap(Highcharts);
+// HighchartsSolidGauge(Highcharts);
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 const { TabPane } = Tabs;
 const { Title, Text } = Typography;
+const { Search: AntSearch } = Input;
 
 // Enhanced Mock Data Generator with Real Hotel Metrics
 const generateAdvancedMockData = () => {
@@ -253,14 +268,18 @@ const generateAdvancedMockData = () => {
 
 const Dashboard = () => {
   const [darkMode, setDarkMode] = useState(false);
+  const [selectedTimeRange, setSelectedTimeRange] = useState("12months");
+  const [selectedBranches, setSelectedBranches] = useState(["all"]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState("overview");
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [bookmarkedReports, setBookmarkedReports] = useState([
     "revenue-trends",
   ]);
+  const [alertsVisible, setAlertsVisible] = useState(false);
   const [realTimeUpdate, setRealTimeUpdate] = useState(true);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [selectedFilters, setSelectedFilters] = useState({});
 
   const mockData = generateAdvancedMockData();
   const {
@@ -270,6 +289,7 @@ const Dashboard = () => {
     roomTypeAnalysis,
     staffPerformance,
     alerts,
+    bookingTrends,
   } = mockData;
 
   // Advanced KPI Calculations
@@ -291,13 +311,16 @@ const Dashboard = () => {
       0
     ) / branchPerformance.length
   ).toFixed(1);
-
   const revenueTrend = 15.7;
+  const profitMargin = 26.3;
+  const totalRooms = branchPerformance.reduce(
+    (sum, branch) => sum + branch.rooms,
+    0
+  );
   const avgADR = Math.round(
     branchPerformance.reduce((sum, branch) => sum + branch.adr, 0) /
       branchPerformance.length
   );
-
   const avgRevPAR = Math.round(
     branchPerformance.reduce((sum, branch) => sum + branch.revpar, 0) /
       branchPerformance.length
@@ -923,6 +946,10 @@ const Dashboard = () => {
     },
   ];
 
+  const handleRefresh = () => {
+    setRefreshKey((prev) => prev + 1);
+  };
+
   const toggleBookmark = (reportId) => {
     setBookmarkedReports((prev) =>
       prev.includes(reportId)
@@ -930,6 +957,55 @@ const Dashboard = () => {
         : [...prev, reportId]
     );
   };
+
+  const exportMenu = (
+    <Menu>
+      <Menu.Item key="pdf" icon={<Download size={14} />}>
+        Export as PDF
+      </Menu.Item>
+      <Menu.Item key="excel" icon={<Download size={14} />}>
+        Export to Excel
+      </Menu.Item>
+      <Menu.Item key="csv" icon={<Download size={14} />}>
+        Export as CSV
+      </Menu.Item>
+      <Menu.Item key="image" icon={<Download size={14} />}>
+        Export Charts as Images
+      </Menu.Item>
+    </Menu>
+  );
+
+  const alertsMenu = (
+    <Menu>
+      {alerts.slice(0, 5).map((alert) => (
+        <Menu.Item key={alert.id} className="p-3 border-b">
+          <div className="flex items-start space-x-2">
+            <Badge
+              status={
+                alert.type === "error"
+                  ? "error"
+                  : alert.type === "warning"
+                  ? "warning"
+                  : alert.type === "success"
+                  ? "success"
+                  : "processing"
+              }
+            />
+            <div>
+              <div className="text-sm font-medium">{alert.message}</div>
+              <div className="text-xs text-gray-500">{alert.time}</div>
+            </div>
+          </div>
+        </Menu.Item>
+      ))}
+      <Menu.Divider />
+      <Menu.Item key="view-all">
+        <Button type="link" size="small" onClick={() => setAlertsVisible(true)}>
+          View All Notifications
+        </Button>
+      </Menu.Item>
+    </Menu>
+  );
 
   return (
     <div
@@ -946,9 +1022,109 @@ const Dashboard = () => {
                 level={1}
                 className={`mb-2 ${darkMode ? "text-white" : "text-gray-900"}`}
               >
-                Dashboard
+                SuperAdmin Command Center
               </Title>
+              <Text
+                className={`text-lg ${
+                  darkMode ? "text-gray-300" : "text-gray-600"
+                }`}
+              >
+                Advanced analytics and insights across all operations
+              </Text>
             </div>
+            {realTimeUpdate && (
+              <Badge status="processing" text="Live Updates" className="ml-4" />
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <AntSearch
+              placeholder="Search reports, metrics..."
+              style={{ width: 200 }}
+              allowClear
+            />
+
+            <Tooltip title="Real-time Updates">
+              <Switch
+                checked={realTimeUpdate}
+                onChange={setRealTimeUpdate}
+                checkedChildren={<Wifi size={12} />}
+                unCheckedChildren={<Wifi size={12} />}
+              />
+            </Tooltip>
+
+            <Dropdown overlay={alertsMenu} trigger={["click"]}>
+              <Badge
+                count={
+                  alerts.filter(
+                    (a) => a.priority === "high" || a.priority === "critical"
+                  ).length
+                }
+              >
+                <Button type="text" icon={<Bell size={16} />} />
+              </Badge>
+            </Dropdown>
+
+            <Tooltip title="Toggle Dark Mode">
+              <Button
+                type="text"
+                icon={darkMode ? <Sun size={16} /> : <Moon size={16} />}
+                onClick={() => setDarkMode(!darkMode)}
+              />
+            </Tooltip>
+
+            <Select
+              mode="multiple"
+              placeholder="Select Branches"
+              value={selectedBranches}
+              onChange={setSelectedBranches}
+              className="w-48"
+              allowClear
+            >
+              <Option value="all">All Branches</Option>
+              {mockData.branches.map((branch) => (
+                <Option key={branch.id} value={branch.id}>
+                  {branch.name}
+                </Option>
+              ))}
+            </Select>
+
+            <Segmented
+              options={[
+                { label: "7D", value: "7days" },
+                { label: "1M", value: "1month" },
+                { label: "3M", value: "3months" },
+                { label: "12M", value: "12months" },
+              ]}
+              value={selectedTimeRange}
+              onChange={setSelectedTimeRange}
+            />
+
+            <Button
+              icon={<Filter size={16} />}
+              onClick={() => setFilterModalVisible(true)}
+            >
+              Filters
+            </Button>
+
+            <Dropdown overlay={exportMenu} trigger={["click"]}>
+              <Button icon={<Download size={16} />}>Export</Button>
+            </Dropdown>
+
+            <Button
+              icon={<RefreshCw size={16} />}
+              onClick={handleRefresh}
+              type="primary"
+              loading={refreshKey % 10 === 0}
+            >
+              Refresh
+            </Button>
+
+            <Button
+              icon={<Settings size={16} />}
+              onClick={() => setDrawerVisible(true)}
+              type="text"
+            />
           </div>
         </div>
 
@@ -1562,6 +1738,11 @@ const Dashboard = () => {
                   ? "bg-gray-800 border-gray-700"
                   : "bg-white border-gray-200"
               }`}
+              extra={
+                <Button size="small" onClick={() => setAlertsVisible(true)}>
+                  View All
+                </Button>
+              }
             >
               <Timeline>
                 {alerts.slice(0, 4).map((alert) => (
