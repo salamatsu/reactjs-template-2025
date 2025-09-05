@@ -32,6 +32,9 @@ export const useLoginAdminAuth = () => {
     onError: (error) => {
       message.error(error.response?.data?.message);
     },
+    onSettled: () => {
+      Modal.destroyAll();
+    },
   });
 };
 
@@ -45,6 +48,9 @@ export const useLoginSuperAdminAuth = () => {
     },
     onError: (error) => {
       message.error(error.response?.data?.message);
+    },
+    onSettled: () => {
+      Modal.destroyAll();
     },
   });
 };

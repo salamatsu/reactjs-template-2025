@@ -1,4 +1,4 @@
-import { App, Button, Form, Input, Spin } from "antd";
+import { App, Button, Form, Input, Modal, Spin } from "antd";
 import { NavLink } from "react-router";
 import { useLoginAdminAuth } from "../../services/requests/useAuth";
 
@@ -25,6 +25,7 @@ const Login = () => {
 
     mutate(values, {
       onSuccess: () => {
+        Modal.destroyAll()
         form.resetFields();
       },
       onError: (error) => {
@@ -41,7 +42,9 @@ const Login = () => {
   return (
     <>
       <section className="min-h-screen mx-3 flex flex-col gap-4 justify-center items-center relative">
-        <h1 className="text-primary-color font-bold text-2xl py-4">ADMIN</h1>
+        <h1 className="text-primary-color font-bold text-2xl py-4">
+          ADMIN
+        </h1>
         <div className="border border-gray-300 lg:w-2/5 md:w-2/3 w-full py-4 px-6 rounded-xl">
           <h1 className="text-primary-color font-semibold text-xl my-3">
             Login to your account

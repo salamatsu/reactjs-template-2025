@@ -7,7 +7,7 @@ import { useWindowSize } from "../../hooks/useWindowSize";
 import { generateItems, getItem } from "../../utils/itemFormat";
 
 const { Sider } = Layout;
-const TopMenus = ({ path, navigations = [], handleCollapse = () => {} }) => (
+const TopMenus = ({ path, navigations = [], handleCollapse = () => { } }) => (
   <Menu
     className=" flex-1"
     mode="inline"
@@ -141,7 +141,6 @@ const Sidebar = ({
                 className="  p-4"
                 style={{ maxWidth: "150px" }}
               />
-              <Divider className=" m-0 mb-3" />
             </div>
           </center>
           <TopMenus path={pathname} navigations={navigations} />
