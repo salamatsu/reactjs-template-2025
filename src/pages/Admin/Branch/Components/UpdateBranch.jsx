@@ -1,14 +1,14 @@
 import { CloseOutlined } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { App, Button, Form, Modal } from "antd";
-import React from "react";
+import React, { useEffect } from "react";
 import BranchForm from "../../../../components/forms/BranchForm";
-import { useAddBranchApi } from "../../../../services/requests/useBranches";
+import { useUpdateBranchApi } from "../../../../services/requests/useBranches";
 
-const AddBranch = ({ open, onClose }) => {
+const UpdateBranch = ({ open, selectedItem, onClose }) => {
   const { message, modal } = App.useApp();
   const queryClient = useQueryClient();
-  const addBranchApi = useAddBranchApi();
+  const updateBranchApi = useUpdateBranchApi();
 
   const [form] = Form.useForm();
 
@@ -19,27 +19,55 @@ const AddBranch = ({ open, onClose }) => {
 
   const handleSubmit = (values) => {
     modal.confirm({
-      title: "Confirm Add Branch",
-      content: "Are you sure you want to add this branch?",
+      title: "Confirm Update Branch",
+      content: "Are you sure you want to update this branch?",
       okText: "Yes",
       cancelText: "No",
       onOk: () => {
-        addBranchApi.mutate(values, {
-          onSuccess: () => {
-            message.success("Branch added successfully");
-            handleClose();
+        updateBranchApi.mutate(
+          { ...values, branchId: selectedItem?.branchId },
+          {
+            onSuccess: () => {
+              message.success("Branch updated successfully");
+              handleClose();
 
-            queryClient.invalidateQueries(["getAllBranchesApi"]);
-          },
-          onError: (error) => {
-            message.error(
-              error.response?.data?.message || "Failed to add branch"
-            );
-          },
-        });
+              queryClient.invalidateQueries(["getAllBranchesApi"]);
+            },
+            onError: (error) => {
+              message.error(
+                error.response?.data?.message || "Failed to update branch"
+              );
+            },
+          }
+        );
       },
     });
   };
+
+  const handleReset = () => {
+    form.setFieldsValue({
+      ...selectedItem,
+      amenities: selectedItem.amenities
+        ? JSON.parse(selectedItem.amenities)
+        : [],
+    });
+
+    // default auto load
+    //   form.setFieldValue("region", selectedItem.region);
+
+    setTimeout(() => {
+      form.setFieldValue("province", selectedItem.province);
+    }, 100);
+    setTimeout(() => {
+      form.setFieldValue("city", selectedItem.city);
+    }, 200);
+  };
+
+  useEffect(() => {
+    if (open) {
+      handleReset();
+    }
+  }, [open]);
 
   return (
     <Modal
@@ -85,23 +113,23 @@ const AddBranch = ({ open, onClose }) => {
       {/* Footer */}
       <div className="flex justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-100">
         <Button
-          onClick={handleClose}
+          onClick={handleReset}
           className="h-9 px-6 text-sm font-medium text-gray-700 border-gray-300 hover:border-gray-400 hover:text-gray-700 focus:border-gray-400 focus:text-gray-700"
-          disabled={addBranchApi.isPending}
+          disabled={updateBranchApi.isPending}
         >
-          Cancel
+          Reset
         </Button>
         <Button
           type="primary"
           onClick={() => form.submit()}
-          loading={addBranchApi.isPending}
+          loading={updateBranchApi.isPending}
           className="h-9 px-6 text-sm font-medium bg-black border-black hover:bg-gray-800 hover:border-gray-800 focus:bg-gray-800 focus:border-gray-800"
         >
-          {addBranchApi.isPending ? `Creating...` : `Create Branch`}
+          {updateBranchApi.isPending ? `Updating...` : `Update Branch`}
         </Button>
       </div>
     </Modal>
   );
 };
 
-export default AddBranch;
+export default UpdateBranch;

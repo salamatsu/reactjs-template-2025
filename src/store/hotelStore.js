@@ -5,8 +5,10 @@ export const useCurrentActiveUserToken = create(
   persist(
     (set) => ({
       token: null,
+      user: null,
       setToken: (token) => set({ token }),
-      reset: () => set({ token: null }),
+      setUser: (user) => set({ user }),
+      reset: () => set({ token: null, user: null }),
     }),
     {
       name: "sogo-hotel-active-user-auth",

@@ -1,8 +1,13 @@
 import dayjs from "dayjs";
 
-export const formatDateTime = (dateTime) => {
+export const DATE_FORMATS = {
+  DATETIME: "MMM DD, YYYY hh:mm A",
+  DATE: "MMM DD, YYYY",
+  TIME: "hh:mm A",
+};
+export const formatDateTime = (dateTime, format = DATE_FORMATS.DATETIME) => {
   if (!dateTime) return "Not set";
-  return dayjs(dateTime).format("MMM DD, YYYY hh:mm A");
+  return dayjs(dateTime).format(format);
 };
 
 export const getCurrentDayType = () => {

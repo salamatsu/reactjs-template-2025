@@ -4,11 +4,17 @@ import { useEffect } from "react";
 import { useCurrentActiveUserToken } from "../store/hotelStore";
 export const Auth = ({ store, redirect }) => {
   const { userData, token } = store();
-  const { setToken } = useCurrentActiveUserToken()
+  const { setToken, setUser } = useCurrentActiveUserToken();
 
   useEffect(() => {
-    setToken(token);
-  }, [token]);
+    if (token) {
+      setToken(token);
+    }
+
+    if (userData) {
+      setUser(userData?.role);
+    }
+  }, [token, userData]);
 
   return userData && token ? <Outlet /> : <Navigate to={redirect} />;
 };

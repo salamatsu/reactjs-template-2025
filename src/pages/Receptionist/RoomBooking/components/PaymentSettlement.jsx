@@ -1,42 +1,40 @@
-import React, { useState, useEffect } from "react";
 import {
+  BankOutlined,
+  CheckCircleOutlined,
+  CloseOutlined,
+  CreditCardOutlined,
+  DollarOutlined,
+  ExclamationCircleOutlined,
+  LoadingOutlined,
+  MobileOutlined,
+  WalletOutlined,
+} from "@ant-design/icons";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Alert,
+  Button,
+  Card,
+  Col,
+  Divider,
   Drawer,
   Form,
   Input,
-  Select,
-  Button,
-  Statistic,
-  Card,
-  Row,
-  Col,
-  Typography,
-  Space,
-  Alert,
-  Divider,
-  Tag,
   InputNumber,
   message,
+  Row,
+  Select,
   Spin,
+  Statistic,
+  Tag,
+  Typography,
 } from "antd";
-import {
-  CreditCardOutlined,
-  WalletOutlined,
-  BankOutlined,
-  MobileOutlined,
-  DollarOutlined,
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
-  LoadingOutlined,
-  CloseOutlined,
-} from "@ant-design/icons";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import React, { useEffect, useState } from "react";
 import {
   getBookingPaymentSummaryApi,
   paymentSettleApi,
 } from "../../../../services/api/bookingsApi";
 
 const { Title, Text } = Typography;
-const { Option } = Select;
 
 // Payment method icons mapping
 const paymentMethodIcons = {

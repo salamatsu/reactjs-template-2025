@@ -15,15 +15,7 @@ export const axiosInstance = axios.create({
   },
 });
 
-// export const axiosInstance = (baseURL) => {
-//   return axios.create({
-//     baseURL: baseURL || import.meta.env.VITE_BASEURL,
-//     headers: {
-//       "Content-Type": "application/json",
-//     },
-//   });
-// };
-
+// USER ROLES
 export const getUsersValues = {
   superAdmin: "superAdmin",
   admin: "admin",
@@ -32,17 +24,17 @@ export const getUsersValues = {
 
 export const tokens = {
   [getUsersValues.admin]: useAdminAuthStore,
-  [getUsersValues.receptionist]: useReceptionistAuthStore, // Fixed: was frontdesk
+  [getUsersValues.receptionist]: useReceptionistAuthStore,
   [getUsersValues.superAdmin]: useSuperAdminAuthStore,
 };
 
 export const getUserToken = (user = getUsersValues.receptionist) => {
-  // Fixed: was frontdesk
   return tokens[user].getState();
 };
 
-export const createAxiosInstanceWithInterceptor = (type = "data", user) => {
-  if (!user) {
+export const createAxiosInstanceWithInterceptor = (type = "data") => {
+  const { token, user } = useCurrentActiveUserToken.getState();
+  if (!token) {
     return message.warning("No user provided");
   }
 
@@ -63,8 +55,6 @@ export const createAxiosInstanceWithInterceptor = (type = "data", user) => {
 
   instance.interceptors.request.use(async (config) => {
     try {
-      const { token } = useCurrentActiveUserToken.getState();
-
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       } else {
