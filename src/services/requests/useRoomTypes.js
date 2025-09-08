@@ -21,11 +21,11 @@ export const ROOM_TYPES_QUERY_KEYS = {
 // Get all room types
 export const useGetAllRoomTypesApi = () => {
   return useQuery({
-    queryKey: ROOM_TYPES_QUERY_KEYS.lists(),
+    queryKey: ROOM_TYPES_QUERY_KEYS.all,
     queryFn: getAllRoomTypesApi,
     retry: 1,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    // staleTime: 5 * 60 * 1000, // 5 minutes
+    // cacheTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: false,
     initialData: [],
     onError: (error) => {

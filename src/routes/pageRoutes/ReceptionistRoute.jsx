@@ -73,8 +73,6 @@ const ReceptionistRoute = () => {
               // Use 'route' instead of 'link' and fix the path extraction
               const routePath = page.route.replace("/receptionist/", "");
 
-              console.log("Route path:", routePath);
-
               return (
                 <Route
                   key={page.route}

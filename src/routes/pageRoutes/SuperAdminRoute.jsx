@@ -1,10 +1,16 @@
-import { BranchesOutlined, DeliveredProcedureOutlined, DockerOutlined, GiftOutlined, HomeOutlined, MoneyCollectOutlined, UserOutlined } from "@ant-design/icons";
+import {
+  BranchesOutlined,
+  DeliveredProcedureOutlined,
+  DockerOutlined,
+  GiftOutlined,
+  HomeOutlined,
+  MoneyCollectOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
 import { Route, Routes } from "react-router";
 import Login from "../../pages/SuperAdmin/Login";
 import * as SuperAdminCMS from "../../pages/SuperAdmin";
-import {
-  useSuperAdminAuthStore
-} from "../../store/hotelStore";
+import { useSuperAdminAuthStore } from "../../store/hotelStore";
 import { Auth, UnAuth } from "../ValidateAuth";
 import BasicLayout from "../../components/layout/BasicLayout";
 import { BoxIcon, DollarSign, User } from "lucide-react";
@@ -84,7 +90,6 @@ const SuperAdminRoute = () => {
       isFilter: true,
       isShow: true,
     },
-
   ].map((page) => ({ ...page, route: "/superadmin" + page.route }));
 
   // ========== Render Routes ==========
@@ -105,10 +110,12 @@ const SuperAdminRoute = () => {
       <Route
         element={<Auth store={useSuperAdminAuthStore} redirect="/superadmin" />}
       >
-
         <Route
           element={
-            <BasicLayout navigations={navigations} store={useSuperAdminAuthStore} />
+            <BasicLayout
+              navigations={navigations}
+              store={useSuperAdminAuthStore}
+            />
           }
         >
           {/* Main Layout Route */}
@@ -117,8 +124,6 @@ const SuperAdminRoute = () => {
             .map((page) => {
               // Use 'route' instead of 'link' and fix the path extraction
               const routePath = page.route.replace("/superadmin/", "");
-
-              console.log("Route path:", routePath);
 
               return (
                 <Route

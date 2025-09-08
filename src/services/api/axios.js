@@ -49,7 +49,6 @@ export const createAxiosInstanceWithInterceptor = (type = "data") => {
   }
 
   const instance = axios.create({
-    // baseURL: baseURL,
     headers,
   });
 

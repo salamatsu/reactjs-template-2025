@@ -5,7 +5,7 @@ import {
   EyeOutlined,
   FilterOutlined,
   PlusOutlined,
-  ReloadOutlined
+  ReloadOutlined,
 } from "@ant-design/icons";
 import {
   Button,
@@ -24,18 +24,18 @@ import {
   Table,
   Tag,
   Tooltip,
-  Typography
+  Typography,
 } from "antd";
-import {
-  Bed
-} from "lucide-react";
+import { Bed } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useModal } from "../../../hooks/useModal";
 import { useTableData } from "../../../hooks/useTableData";
 import { parseJsonField } from "../../../utils/parseJsonField";
 import { StatusBadge } from "../../../components/ui/badges/StatusBadge";
+import RoomTypeForm from "../../../components/forms/RoomTypeForm";
+import { useGetAllRoomTypesApi } from "../../../services/requests/useRoomTypes";
 
-const { Title, } = Typography;
+const { Title } = Typography;
 const { Option } = Select;
 
 // Mock Data - In a real app, this would come from your API
@@ -224,7 +224,10 @@ const ActionButtons = ({
 );
 
 const RoomTypes = () => {
-  const [roomTypes, setRoomTypes] = useState(initialData.roomTypes);
+  const getAllRoomTypesApi = useGetAllRoomTypesApi();
+  console.log("useGetAllRoomTypesApi", getAllRoomTypesApi.data);
+
+  const [roomTypes, setRoomTypes] = useState(getAllRoomTypesApi.data);
   const [branches] = useState(initialData.branches);
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({});
@@ -335,8 +338,10 @@ const RoomTypes = () => {
       setRoomTypes((prev) => [...prev, newRoomType]);
       message.success("Room type created successfully");
     }
-    hideModal();
-    form.resetFields();
+
+    console.log(values);
+    // hideModal();
+    // form.resetFields();
   };
 
   const handleDeleteRoomType = (record) => {
@@ -418,111 +423,7 @@ const RoomTypes = () => {
           onFinish={handleSubmitRoomType}
           className="mt-4"
         >
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="roomTypeCode"
-                label="Room Type Code"
-                rules={[
-                  { required: true, message: "Please input room type code!" },
-                ]}
-              >
-                <Input placeholder="e.g., STD, DLX, STE" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="roomTypeName"
-                label="Room Type Name"
-                rules={[
-                  { required: true, message: "Please input room type name!" },
-                ]}
-              >
-                <Input placeholder="e.g., Standard Room" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item name="description" label="Description">
-            <Input.TextArea rows={2} placeholder="Room type description" />
-          </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="bedConfiguration" label="Bed Configuration">
-                <Select placeholder="Select bed configuration">
-                  <Option value="Single Bed">Single Bed</Option>
-                  <Option value="Queen Bed">Queen Bed</Option>
-                  <Option value="King Bed">King Bed</Option>
-                  <Option value="Twin Beds">Twin Beds</Option>
-                  <Option value="Bunk Bed">Bunk Bed</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item name="maxOccupancy" label="Max Occupancy">
-                <InputNumber min={1} max={10} placeholder="2" />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item name="roomSize" label="Room Size">
-                <Input placeholder="25 sqm" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="branchId" label="Branch">
-                <Select placeholder="Select branch (optional for all branches)">
-                  {branches.map((branch) => (
-                    <Option key={branch.branchId} value={branch.branchId}>
-                      {branch.branchName}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="isActive" label="Status" valuePropName="checked">
-                <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item name="amenities" label="Amenities">
-            <Select
-              mode="tags"
-              placeholder="Add amenities"
-              tokenSeparators={[","]}
-            >
-              <Option value="AC">Air Conditioning</Option>
-              <Option value="TV">Television</Option>
-              <Option value="WiFi">WiFi</Option>
-              <Option value="Mini Fridge">Mini Fridge</Option>
-              <Option value="Safe">Safe</Option>
-              <Option value="Balcony">Balcony</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item name="features" label="Features">
-            <Select
-              mode="tags"
-              placeholder="Add features"
-              tokenSeparators={[","]}
-            >
-              <Option value="Private Bathroom">Private Bathroom</Option>
-              <Option value="Jacuzzi">Jacuzzi</Option>
-              <Option value="Kitchenette">Kitchenette</Option>
-              <Option value="Work Desk">Work Desk</Option>
-              <Option value="Sofa">Sofa</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item name="imageUrl" label="Image URL">
-            <Input placeholder="https://example.com/room-image.jpg" />
-          </Form.Item>
-
+          <RoomTypeForm />
           <Form.Item className="mb-0">
             <Space className="w-full justify-end">
               <Button onClick={hideModal}>Cancel</Button>

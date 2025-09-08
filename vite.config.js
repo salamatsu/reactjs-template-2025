@@ -12,11 +12,11 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: 8002,
       proxy: {
-        '/api': {
+        "/api": {
           target: env.VITE_BASEURL,
           changeOrigin: true,
-        }
-      }
+        },
+      },
     },
   };
 });

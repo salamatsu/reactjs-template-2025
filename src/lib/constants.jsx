@@ -8,6 +8,78 @@ export const ROOM_STATUSES = {
   RESERVED: "reserved",
 };
 
+export const BED_CONFIGURATIONS = [
+  "Single Bed",
+  "Double Bed",
+  "Queen Bed",
+  "King Bed",
+  "Twin Beds",
+  "Bunk Beds",
+  "Sofa Bed",
+  "Extra Bed / Rollaway",
+  "Hospital Adjustable Bed",
+];
+
+export const AMENITIES = [
+  {
+    category: "Room Features",
+    amenities: [
+      "Air Conditioning",
+      "LED/LCD TV with cable channels",
+      "Free Wi-Fi (rooms & public areas)",
+      "Private bathroom with shower",
+      "Complimentary toiletries & towels",
+      "In-room safe",
+      "Desk & phone",
+      "Free bottled water",
+      "Toothbrush & toothpaste",
+      "Slippers",
+      "Bidet",
+      "Hairdryer",
+    ],
+  },
+  {
+    category: "Guest Services & Facilities",
+    amenities: [
+      "24/7 Room Service",
+      "Daily housekeeping",
+      "24-hour front desk",
+      "Concierge services",
+      "Luggage storage",
+      "Laundry service",
+      "Dry cleaning",
+      "Security (CCTV, smoke-free rooms)",
+    ],
+  },
+  {
+    category: "Dining & Refreshments",
+    amenities: [
+      "On-site restaurant/café",
+      "Coffee/tea in common areas",
+      "Complimentary bottled water",
+      "Breakfast available (with fee)",
+    ],
+  },
+  {
+    category: "Location & Accessibility",
+    amenities: [
+      "Elevators/lifts",
+      "Wheelchair accessible rooms",
+      "Free self-parking",
+      "Valet parking",
+    ],
+  },
+  {
+    category: "Health & Safety",
+    amenities: [
+      "Fire extinguishers",
+      "Smoke detectors",
+      "First-aid kits",
+      "COVID-19 safety protocols",
+    ],
+  },
+];
+
 export const STATUS_CONFIGS = {
   [ROOM_STATUSES.AVAILABLE]: {
     color: "bg-green-100 text-green-800 border-green-200",

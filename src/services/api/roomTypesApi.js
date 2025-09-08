@@ -5,10 +5,13 @@ const axiosDefault = createAxiosInstanceWithInterceptor("data");
 
 // GET /roomTypes - Get all room types
 export const getAllRoomTypesApi = async () => {
+  console.log("result1");
   try {
     const result = await axiosDefault.get(`/api/roomTypes`);
+    console.log("result");
     return result.data;
   } catch (error) {
+    console.log("errresult");
     throw handleApiError(error);
   }
 };
