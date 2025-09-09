@@ -67,7 +67,7 @@ const SuperAdminRoute = () => {
       name: "Users",
       label: "Users",
       icon: <UserOutlined className="h-5 w-5" />,
-      component: <SuperAdminCMS.Branch />,
+      component: <SuperAdminCMS.Users />,
       isFilter: true,
       isShow: true,
     },

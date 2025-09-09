@@ -1,5 +1,12 @@
 import { AlertCircle, CheckCircle, Clock, XCircle } from "lucide-react";
 
+export const USER_ROLES = {
+  superadmin: "Super Admin",
+  admin: "Admin",
+  receptionist: "Receptionist",
+  guest: "Guest",
+};
+
 export const STATUS_FILTERS = [
   { text: "Active", value: true },
   { text: "Inactive", value: false },
