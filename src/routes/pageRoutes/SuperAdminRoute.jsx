@@ -1,12 +1,14 @@
-import {
-  HomeOutlined
-} from "@ant-design/icons";
+import { HomeOutlined } from "@ant-design/icons";
+import { Suspense, lazy } from "react";
 import { Route, Routes } from "react-router";
 import BasicLayout from "../../components/layout/BasicLayout";
-import * as SuperAdminCMS from "../../pages/SuperAdmin";
-import Login from "../../pages/SuperAdmin/Login";
+import { ComponentLoader } from "../../components/LoadingFallback";
 import { useSuperAdminAuthStore } from "../../store/hotelStore";
 import { Auth, UnAuth } from "../ValidateAuth";
+
+// Lazy load page components
+const Login = lazy(() => import("../../pages/SuperAdmin/Login"));
+const Dashboard = lazy(() => import("../../pages/SuperAdmin/Dashboard"));
 
 const SuperAdminRoute = () => {
   // ========== Navigation Configuration ==========
@@ -16,7 +18,11 @@ const SuperAdminRoute = () => {
       name: "Dashboard",
       label: "Dashboard",
       icon: <HomeOutlined className="h-5 w-5" />,
-      component: <SuperAdminCMS.Dashboard />,
+      component: (
+        <Suspense fallback={<ComponentLoader />}>
+          <Dashboard />
+        </Suspense>
+      ),
       isFilter: true,
       isShow: true,
     },
@@ -33,7 +39,15 @@ const SuperAdminRoute = () => {
           />
         }
       >
-        <Route path="/" index element={<Login />} />
+        <Route
+          path="/"
+          index
+          element={
+            <Suspense fallback={<ComponentLoader />}>
+              <Login />
+            </Suspense>
+          }
+        />
       </Route>
 
       {/* Protected Route Wrapper */}

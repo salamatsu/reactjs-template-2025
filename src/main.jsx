@@ -3,18 +3,25 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
 import "./index.css";
+import { initSentry } from "./config/sentry.js";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
+
+// Initialize Sentry before rendering
+initSentry();
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <ConfigProvider
-      theme={{
-        token: {
-          colorPrimary: "#fe0808",
-          colorBgBase: "#fff",
-        },
-      }}
-    >
-      <App />
-    </ConfigProvider>
+    <ErrorBoundary>
+      <ConfigProvider
+        theme={{
+          token: {
+            colorPrimary: "#fe0808",
+            colorBgBase: "#fff",
+          },
+        }}
+      >
+        <App />
+      </ConfigProvider>
+    </ErrorBoundary>
   </StrictMode>
 );

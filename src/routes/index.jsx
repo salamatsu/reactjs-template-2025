@@ -1,15 +1,47 @@
+import { Suspense, lazy } from "react";
 import { RouterProvider, createBrowserRouter } from "react-router";
-import LandingPage from "../pages/LandingPage";
-import AdminRoute from "./pageRoutes/AdminRoute";
-import ReceptionistRoute from "./pageRoutes/ReceptionistRoute";
-import SuperAdminRoute from "./pageRoutes/SuperAdminRoute";
+import LoadingFallback from "../components/LoadingFallback";
+
+// Lazy load route components for code splitting
+const LandingPage = lazy(() => import("../pages/LandingPage"));
+const AdminRoute = lazy(() => import("./pageRoutes/AdminRoute"));
+const ReceptionistRoute = lazy(() => import("./pageRoutes/ReceptionistRoute"));
+const SuperAdminRoute = lazy(() => import("./pageRoutes/SuperAdminRoute"));
 
 const RootRoutes = () => {
   const router = createBrowserRouter([
-    { path: "/", Component: LandingPage },
-    { path: "/superadmin/*", Component: SuperAdminRoute },
-    { path: "/admin/*", Component: AdminRoute },
-    { path: "/receptionist/*", Component: ReceptionistRoute },
+    {
+      path: "/",
+      element: (
+        <Suspense fallback={<LoadingFallback />}>
+          <LandingPage />
+        </Suspense>
+      ),
+    },
+    {
+      path: "/superadmin/*",
+      element: (
+        <Suspense fallback={<LoadingFallback />}>
+          <SuperAdminRoute />
+        </Suspense>
+      ),
+    },
+    {
+      path: "/admin/*",
+      element: (
+        <Suspense fallback={<LoadingFallback />}>
+          <AdminRoute />
+        </Suspense>
+      ),
+    },
+    {
+      path: "/receptionist/*",
+      element: (
+        <Suspense fallback={<LoadingFallback />}>
+          <ReceptionistRoute />
+        </Suspense>
+      ),
+    },
   ]);
 
   return <RouterProvider router={router} />;
